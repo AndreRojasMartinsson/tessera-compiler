@@ -316,7 +316,6 @@ dependencies = [
  "memmap2",
  "miette",
  "parser",
- "qbe",
  "symbols",
  "type_solver",
 ]
@@ -704,12 +703,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "qbe"
-version = "2.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3e61aca470659ab47bfd7dcfc46cf63da2976be336b91bf3364e6792bc22af0"
-
-[[package]]
 name = "quick-xml"
 version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -907,7 +900,7 @@ dependencies = [
  "ast",
  "gxhash",
  "interner",
- "qbe",
+ "ir_builder",
  "uuid",
 ]
 
@@ -1093,7 +1086,7 @@ dependencies = [
  "ast",
  "gxhash",
  "interner",
- "qbe",
+ "ir_builder",
  "symbols",
 ]
 

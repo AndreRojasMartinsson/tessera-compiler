@@ -3,12 +3,12 @@ use std::{
     fmt::{self, Display},
     iter::Peekable,
     num::ParseIntError,
-    rc::Rc,
+    sync::Arc,
 };
 
 use gxhash::{HashMap, HashSet, HashSetExt};
 
-pub type ImutStr = Rc<str>;
+pub type ImutStr = Arc<str>;
 pub type StructPool = HashMap<String, (Vec<String>, Vec<Argument>)>;
 
 pub static VOID_POINTER_ID: &str = "__void_ptr__";
@@ -30,8 +30,8 @@ pub struct Argument {
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Linkage {
     pub exported: bool,
-    pub section: Option<Rc<str>>,
-    pub secflags: Option<Rc<str>>,
+    pub section: Option<ImutStr>,
+    pub secflags: Option<ImutStr>,
 }
 
 impl Linkage {
@@ -74,7 +74,7 @@ impl Display for Linkage {
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Block {
-    pub label: Rc<str>,
+    pub label: ImutStr,
     pub statements: Vec<Statement>,
 }
 
@@ -160,7 +160,7 @@ impl Display for Statement {
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Function {
     pub linkage: Linkage,
-    pub name: Rc<str>,
+    pub name: ImutStr,
     pub parameters: Vec<(Type, Value)>,
     pub return_type: Option<Type>,
     pub blocks: Vec<Block>,
@@ -211,22 +211,6 @@ impl Function {
                 )
             })
         })
-        // self.blocks
-        //     .iter()
-        //     .find(|block| {
-        //         block
-        //             .statements
-        //             .iter()
-        //             .find(|i| {
-        //                 matches!(
-        //                     i,
-        //                     Statement::Volatile(Instruction::Ret(_))
-        //                         | Statement::Volatile(Instruction::Hlt)
-        //                 )
-        //             })
-        //             .is_some()
-        //     })
-        //     .is_some()
     }
 
     pub fn returns(&self) -> bool {
@@ -290,15 +274,12 @@ pub enum Type {
     Single,
     /// `d` -- 64-bit floating point number
     Double,
-    /// `char` -- Aggregate type?
     Char,
-    /// `void` -- Aggregate type?
     Void,
-    /// `null` -- Aggregate type?
     Null,
-    /// `string` or `{TY}*` -- Aggregate type?
+    /// `string` or `{TY}*`
     Pointer(Box<Type>),
-    /// `{name}<{}>` -- Aggregate type
+    /// `{name}<{}>`
     Struct(ImutStr),
     /// `{name}` -- Unknown type
     Unknown(ImutStr),
@@ -344,7 +325,7 @@ pub enum Primitive {
 }
 
 impl Type {
-    pub fn display(&self) -> Rc<str> {
+    pub fn display(&self) -> ImutStr {
         match self {
             Self::Byte => "i8".into(),
             Self::UnsignedByte => "u8".into(),
@@ -368,7 +349,7 @@ impl Type {
             Self::Void => "void".into(),
             Self::Null => "null".into(),
             // TODO: generic structs
-            Self::Struct(td, ..) => Rc::clone(td),
+            Self::Struct(td, ..) => Arc::clone(td),
             Self::Function(inner) => {
                 if let Some(inner) = *inner.to_owned() {
                     format!(
@@ -377,7 +358,7 @@ impl Type {
                             .parameters
                             .iter()
                             .map(|arg| arg.0.clone().display())
-                            .collect::<Vec<Rc<str>>>()
+                            .collect::<Vec<ImutStr>>()
                             .join(", ")
                     )
                     .into()
@@ -385,12 +366,11 @@ impl Type {
                     "<unknown function>".into()
                 }
             }
-            Self::Unknown(name) => Rc::clone(name),
-            _ => unreachable!(),
+            Self::Unknown(name) => Arc::clone(name),
         }
     }
 
-    pub fn id(&self) -> Rc<str> {
+    pub fn id(&self) -> ImutStr {
         match self {
             Self::Char => "char".into(),
             Self::Boolean => "bool".into(),
@@ -413,13 +393,13 @@ impl Type {
             Self::Double => "f64".into(),
             Self::Void => "void".into(),
             Self::Null => "null".into(),
-            Self::Struct(td, ..) => Rc::clone(td),
+            Self::Struct(td, ..) => Arc::clone(td),
             Self::Function(_) => self.display(),
             _ => "".into(),
         }
     }
 
-    pub fn strict_id(&self) -> Rc<str> {
+    pub fn strict_id(&self) -> ImutStr {
         match self {
             x if x.is_string() => "string".into(),
             x if x.is_void_pointer() => VOID_POINTER_ID.into(),
@@ -428,7 +408,7 @@ impl Type {
         }
     }
 
-    pub fn to_internal_id(&self) -> Rc<str> {
+    pub fn to_internal_id(&self) -> ImutStr {
         let num: u8 = match self {
             Type::UnsignedByte => 4,
             Type::UnsignedHalfword => 5,
@@ -450,13 +430,13 @@ impl Type {
 
         match self {
             Type::Pointer(inner) => format!("{GENERIC_POINTER}.{}", inner.to_internal_id()).into(),
-            Type::Struct(name) => Rc::clone(name),
+            Type::Struct(name) => Arc::clone(name),
             Type::Unknown(name) => format!("{GENERIC_UNKNOWN}.{name}").into(),
             _ => num.to_string().into(),
         }
     }
 
-    pub fn from_internal_id(id: Rc<str>) -> (Rc<str>, Vec<Type>) {
+    pub fn from_internal_id(id: ImutStr) -> (ImutStr, Vec<Type>) {
         fn is_num_id(id: String) -> Result<u8, ParseIntError> {
             if [
                 GENERIC_IDENTIFIER,
@@ -599,14 +579,14 @@ impl Type {
         }
     }
 
-    pub fn get_struct_inner(&self) -> Option<Rc<str>> {
+    pub fn get_struct_inner(&self) -> Option<ImutStr> {
         match self.clone() {
             Self::Struct(val, ..) => Some(val),
             _ => None,
         }
     }
 
-    pub fn get_unknown_inner(&self) -> Option<Rc<str>> {
+    pub fn get_unknown_inner(&self) -> Option<ImutStr> {
         match self.clone() {
             Self::Unknown(val) => Some(val),
             _ => None,
@@ -799,14 +779,13 @@ impl fmt::Display for Type {
             Self::Struct(td) => write!(f, ":{}", td),
             Self::Function(_) => write!(f, "l"),
             Self::Unknown(name) => panic!("Tried to compile with a generic type {name}"),
-            _ => unreachable!(),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum DataItem {
-    String(Rc<str>),
+    String(ImutStr),
     Const(f64),
 }
 
@@ -822,7 +801,7 @@ impl Display for DataItem {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data {
     pub linkage: Linkage,
-    pub name: Rc<str>,
+    pub name: ImutStr,
     pub align: Option<u64>,
     pub items: Vec<(Type, DataItem)>,
 }
@@ -830,7 +809,7 @@ pub struct Data {
 impl Data {
     pub fn new(
         linkage: Linkage,
-        name: Rc<str>,
+        name: ImutStr,
         align: Option<u64>,
         items: Vec<(Type, DataItem)>,
     ) -> Self {
@@ -857,7 +836,7 @@ impl Display for Data {
             self.items
                 .iter()
                 .map(|(ty, item)| format!("{ty} {item}").into())
-                .collect::<Vec<Rc<str>>>()
+                .collect::<Vec<ImutStr>>()
                 .join(", ")
         )
     }
@@ -865,7 +844,7 @@ impl Display for Data {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeDef {
-    pub name: Rc<str>,
+    pub name: ImutStr,
     pub align: Option<u64>,
     pub items: Vec<(Type, usize)>,
     pub public: bool,
@@ -877,7 +856,6 @@ impl TypeDef {
     pub fn size(&self, module: &RefCell<Module>) -> usize {
         let mut size = 0;
 
-        // for (ty, _) in self.items.iter().cloned() {
         for (ty, _) in self.items.iter() {
             if ty.is_struct() {
                 let tmp_size = module
@@ -937,7 +915,7 @@ impl Display for TypeDef {
                     )
                     .into()
                 })
-                .collect::<Vec<Rc<str>>>()
+                .collect::<Vec<ImutStr>>()
                 .join(", ")
         )
     }
@@ -980,7 +958,7 @@ impl Module {
         while passes > 0 {
             passes -= 1;
 
-            let mut used_functions: HashSet<Rc<str>> = HashSet::new();
+            let mut used_functions: HashSet<ImutStr> = HashSet::new();
 
             for func in self.functions.iter() {
                 for block in func.blocks.iter() {
@@ -1108,7 +1086,7 @@ impl Display for Prefix {
 pub enum Value {
     Temp(ImutStr),
     Global(ImutStr),
-    Const(Prefix, Rc<str>),
+    Const(Prefix, ImutStr),
     Literal(ImutStr),
 }
 
@@ -1393,7 +1371,7 @@ pub enum Instruction {
 
 impl Instruction {
     #[allow(dead_code)]
-    fn is_global_used(&self, global_name: Rc<str>) -> bool {
+    fn is_global_used(&self, global_name: ImutStr) -> bool {
         match self {
             Self::Add(v1, v2)
             | Self::Sub(v1, v2)
@@ -1527,7 +1505,7 @@ impl fmt::Display for Instruction {
                         Type::Null => format!("{}", temp).into(),
                         _ => format!("{} {}", ty.clone().into_abi(), temp).into(),
                     })
-                    .collect::<Vec<Rc<str>>>()
+                    .collect::<Vec<ImutStr>>()
                     .join(", ")
             ),
             Self::Alloc4(val) => write!(f, "alloc4 {}", val),

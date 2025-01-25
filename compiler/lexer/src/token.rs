@@ -1,8 +1,8 @@
 use std::ops::Range;
 
-use interner::{Atom, intern};
+use interner::{intern, Atom};
 
-use crate::{Kind, value::Value};
+use crate::{value::Value, Kind};
 
 #[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct Token {

@@ -44,7 +44,6 @@ pub enum Kind {
     Shl,
     Shr,
     Gte,
-    Concat,
     Lte,
     Equal,
     NotEqual,

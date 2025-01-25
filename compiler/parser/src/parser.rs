@@ -4,11 +4,11 @@ use ast::{
     AssignTarget, Block, BlockItem, Expr, ForInit, Identifier, IfAlternate, IfExpr, LetBinding,
     LiteralValue, MemberExpr, MemberTy, Parameter, Program, ProgramItem, Ty, Type,
 };
-use interner::{Atom, lookup};
+use interner::{lookup, Atom};
 use lexer::{
-    Kind, Token,
     operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp},
     value::Value,
+    Kind, Token,
 };
 use node::Node;
 use symbols::{FunctionSymbol, Mutability, Symbol, SymbolTable, VariableSymbol, Visibility};
@@ -387,26 +387,6 @@ impl<'ctx> Parser<'ctx> {
             }
         }
 
-        // if let Some(kind) = self.cur_kind() {
-        //     if let Some(operator) = AssignOp::from_kind(*kind) {
-        //         self.advance(); // consume operator
-        //         left = self.parse_primary();
-        //
-        //         let right = self.parse_binary_expr(left.clone(), 0);
-        //
-        //         left = Expr::Assign {
-        //             node: Node::new(left.node().start, right.node().end),
-        //             target: match left {
-        //                 Expr::Member(member) => AssignTarget::Member(member),
-        //                 Expr::Identifier(ident) => AssignTarget::Identifier(ident),
-        //                 _ => unreachable!(),
-        //             },
-        //             operator,
-        //             expr: Box::new(right),
-        //         }
-        //     }
-        // }
-        //
         left
     }
 
@@ -420,9 +400,8 @@ impl<'ctx> Parser<'ctx> {
             Kind::Equal | Kind::NotEqual => 6,
             Kind::Lt | Kind::Gt | Kind::Gte | Kind::Lte => 7,
             Kind::Shl | Kind::Shr => 8,
-            Kind::Concat => 9,
-            Kind::Plus | Kind::Dash => 10,
-            Kind::Asterisk | Kind::Slash | Kind::Percent => 11,
+            Kind::Plus | Kind::Dash => 9,
+            Kind::Asterisk | Kind::Slash | Kind::Percent => 10,
             _ => unreachable!(),
         }
     }
@@ -438,7 +417,6 @@ impl<'ctx> Parser<'ctx> {
             | Some(Kind::Tilde)
             | Some(Kind::Bang)
             | Some(Kind::Dash) => self.parse_prefix(),
-            // TODO: Differentiate between parenthesis expression, tuple expression, and type cast
             Some(Kind::LParen) => match self.lookahead_n(1).map(|x| x.kind) {
                 Some(Kind::PrimitiveType) => self.parse_cast_expr(),
                 _ => {
@@ -499,6 +477,7 @@ impl<'ctx> Parser<'ctx> {
         }
     }
 
+    // /// ( Identifier | MemberExpr ) ~ ("*=" | "+=" | "/=" | "%=" ... ) ~ Expr
     fn parse_assign_expr(&mut self, left: Expr) -> Expr {
         let token = self.advance();
         if let Some(operator) = AssignOp::from_kind(token.kind) {
@@ -573,9 +552,6 @@ impl<'ctx> Parser<'ctx> {
             index: Box::new(index),
         }
     }
-
-    // /// ( Identifier | MemberExpr ) ~ ("*=" | "+=" | "/=" | "%=" ... ) ~ Expr
-    // fn parse_assign_expr(&mut self) -> Expr {}
 
     /// Identifier ~ ( "::" | "." ) ~ ( Identifier ~ ( "::" | "." )? )*
     fn parse_member_expr(&mut self, member_ty: MemberTy) -> MemberExpr {

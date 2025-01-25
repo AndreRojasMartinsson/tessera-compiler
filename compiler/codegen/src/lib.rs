@@ -2,18 +2,16 @@ use gxhash::{HashMap, HashMapExt};
 use interner::{lookup, Atom};
 use lexer::operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp};
 use node::Node;
-use std::{cell::RefCell, cmp::Ordering, fs::File, io::Write, primitive};
+use std::{cell::RefCell, cmp::Ordering};
 
 use ast::{
-    AssignTarget, Block as AstBlock, BlockItem, Expr, ForInit, IfAlternate, LetBinding,
-    LiteralValue, Parameter, Program, ProgramItem, Ty, Type as AstType,
+    AssignTarget, Block as AstBlock, Expr, ForInit, IfAlternate, LetBinding, LiteralValue,
+    Parameter, Program, ProgramItem, Ty, Type as AstType,
 };
 use ir_builder::{
-    Argument, Block, Cmp, Data, DataItem, Function, ImutStr, Instruction, Linkage, Module, Prefix,
-    Primitive, Statement, StructPool, Type, Value, GC_NOOP,
+    Cmp, Data, DataItem, Function, ImutStr, Instruction, Linkage, Module, Prefix, Statement,
+    StructPool, Type, Value, GC_NOOP,
 };
-
-mod builder;
 
 macro_rules! hashmap {
     () => {
@@ -47,17 +45,21 @@ macro_rules! is_unknown {
     };
 }
 
+#[derive(Debug, Clone)]
+struct Context<'a> {
+    func: &'a RefCell<Function>,
+    module: &'a RefCell<Module>,
+}
+
 pub struct CodeGen {
     temp_count: u32,
     data_sections: Vec<Data>,
     scopes: Vec<HashMap<String, (Type, Value)>>,
     // Struct Name => ((Field Name, Field Type)[])
+    #[allow(dead_code)]
     struct_pool: StructPool,
     loop_labels: Vec<ImutStr>,
-    buf_metadata: HashMap<String, (Type, Value)>,
     tree: Program,
-    /// lambda functions that should be added asap
-    deferred_functions: Vec<Function>,
     /// Map from temporary ot its stack allocated address
     address_pool: HashMap<String, Value>,
 }
@@ -70,31 +72,16 @@ impl CodeGen {
             data_sections: vec![],
             struct_pool: hashmap![],
             loop_labels: vec![],
-            buf_metadata: hashmap![],
             tree,
-            deferred_functions: vec![],
             address_pool: hashmap![],
         };
 
         let module = Module::new();
         let module_ref = RefCell::new(module);
 
-        if generator
-            .tree
-            .items
-            .iter()
-            .find(|primitive| match primitive {
-                ProgramItem::Function {
-                    ty,
-                    ident,
-                    parameters,
-                    body,
-                    ..
-                } if &(lookup!(ident.name).to_owned()) == "main" => true,
-                _ => false,
-            })
-            .is_none()
-            && !object_output
+        if generator.tree.items.iter().any(|item|
+            matches!(item, ProgramItem::Function { ident, .. } if &(lookup!(ident.name).to_owned()) == "main"))
+                && !object_output
         {
             panic!(
                 "ERROR: Could not compile module\n{}\n\n{}\n{}\n{}\n",
@@ -105,49 +92,46 @@ impl CodeGen {
             )
         }
 
-        for item in generator.tree.items.clone() {
-            match item.clone() {
-                ProgramItem::Function {
-                    ty,
-                    ident,
+        generator.tree.items.clone().iter().for_each(|item| {
+            if let ProgramItem::Function {
+                ty,
+                ident,
+                parameters,
+                public,
+                body,
+                ..
+            } = item
+            {
+                let func = generator.generate_function(
+                    ident.name,
+                    *public,
                     parameters,
-                    public,
-                    body,
-                    ..
-                } => {
-                    let func = generator.generate_function(
-                        ident.name,
-                        public,
-                        &parameters,
-                        Some(Self::ast_type_to_type(ty)),
-                        body,
-                        &module_ref,
-                    );
+                    Some(Self::ast_type_to_type(ty.clone())),
+                    body.clone(),
+                    &module_ref,
+                );
 
-                    module_ref.borrow_mut().add_function(func);
-                }
-                _ => {}
+                module_ref.borrow_mut().add_function(func);
             }
-        }
+        });
 
         for data in generator.data_sections {
             module_ref.borrow_mut().add_data(data);
         }
 
-        // module_ref.borrow_mut().remove_unused_functions();
-        // module_ref.borrow_mut().remove_unused_data();
-        // module_ref.borrow_mut().remove_empty_structs();
+        module_ref
+            .borrow_mut()
+            .remove_unused_functions(object_output, None);
 
-        // let mut file = File::create("out.ssa").map_err(|_| "Failed to create the file.")?;
-        // file.write_all(module_ref.borrow().to_string().as_bytes())
-        //     .map_err(|_| "Failed to write to file.")?;
+        module_ref.borrow_mut().remove_unused_data();
+        module_ref.borrow_mut().remove_empty_structs();
 
         if print_ir {
             println!("{}", module_ref.borrow());
         }
-        // file.flush().map_err(|_| "Failed to flush file.")?;
 
         let ir = module_ref.borrow().to_string();
+
         Ok(ir)
     }
 
@@ -167,18 +151,11 @@ impl CodeGen {
         )
     }
 
-    fn new_variable(
-        &mut self,
-        ty: &Type,
-        name: ImutStr,
-        func: Option<&RefCell<Function>>,
-        new: bool,
-        minify: bool,
-    ) -> Value {
+    fn new_variable(&mut self, ty: &Type, name: ImutStr, new: bool, minify: bool) -> Value {
         let tmp = if new {
             self.new_temporary(Some(&name), minify)
         } else {
-            let existing_var = self.get_variable(&name, func, None);
+            let existing_var = self.get_variable(&name, None);
 
             match existing_var {
                 Ok((_, val)) => match val {
@@ -201,7 +178,6 @@ impl CodeGen {
     fn get_variable(
         &mut self,
         name: &ImutStr,
-        func: Option<&RefCell<Function>>,
         module: Option<&RefCell<Module>>,
     ) -> Result<(Type, Value), String> {
         let var = self
@@ -214,50 +190,28 @@ impl CodeGen {
 
         if var.is_err() {
             for item in self.tree.items.iter().cloned() {
-                match item {
-                    ProgramItem::Function { ident, .. } => {
-                        let op_name: ImutStr = lookup!(ident.name).into();
-                        if *name == op_name.into() {
-                            // if !usable && !func.unwrap().borrow_mut().imported && !builtin {
-                            //     panic!(
-                            //         "Function named '{}' was not imported and can't be used",
-                            //         name.replace(".", "::")
-                            //     )
-                            // }
-
-                            return Ok((
-                                Type::Function(Box::new(if let Some(module) = module {
-                                    module
-                                        .borrow()
-                                        .functions
-                                        .iter()
-                                        .find(|func| func.name == *name)
-                                        .cloned()
-                                } else {
-                                    None
-                                })),
-                                Value::Global(name.clone()),
-                            ));
-                        }
+                if let ProgramItem::Function { ident, .. } = item {
+                    let op_name: ImutStr = lookup!(ident.name).into();
+                    if *name == op_name {
+                        return Ok((
+                            Type::Function(Box::new(if let Some(module) = module {
+                                module
+                                    .borrow()
+                                    .functions
+                                    .iter()
+                                    .find(|func| func.name == *name)
+                                    .cloned()
+                            } else {
+                                None
+                            })),
+                            Value::Global(name.clone()),
+                        ));
                     }
-                    _ => {}
                 }
             }
         }
 
         var.cloned()
-    }
-
-    fn new_manual_argument(&mut self, ty: &Type, name: &ImutStr) -> Value {
-        let tmp = Value::Temp(name.clone());
-
-        let scope = self
-            .scopes
-            .last_mut()
-            .expect("Expected last scope to exist");
-
-        scope.insert(name.to_string(), (ty.to_owned(), tmp.to_owned()));
-        tmp
     }
 
     fn get_variable_lazy(
@@ -266,11 +220,11 @@ impl CodeGen {
         func: Option<&RefCell<Function>>,
         module: Option<&RefCell<Module>>,
     ) -> Option<(Type, Value)> {
-        let var = self.get_variable(&name, func, module);
+        let var = self.get_variable(name, module);
 
         match var {
             Ok((ty, val)) => {
-                let res = self.get_variable(&format!("{}.addr", name).into(), func, module);
+                let res = self.get_variable(&format!("{}.addr", name).into(), module);
                 if res.is_ok() && func.is_some() {
                     let (_, addr_val) = res.unwrap();
 
@@ -345,7 +299,6 @@ impl CodeGen {
             let tmp = self.new_variable(
                 &ty,
                 lookup!(parameter.ident.name.clone()).into(),
-                None,
                 false,
                 false,
             );
@@ -412,11 +365,6 @@ impl CodeGen {
                         panic!("Continue can only be used in a loop.");
                     };
                 }
-                _ => todo!(), // ast::BlockItem::Expr { expr, .. } => match expr {
-                              //     Expr::Literal { .. } => {}
-                              //     _ => {}
-                              // },
-                              // _ => {}
             };
         }
 
@@ -514,27 +462,26 @@ impl CodeGen {
 
         for block in func_ref.borrow().blocks.iter() {
             for statement in block.statements.clone() {
-                if let Statement::Volatile(Instruction::Ret(val)) = statement {
-                    if let Some((ty, val)) = val {
-                        if first_ty.is_none() {
-                            first_ty = Some(ty.clone());
+                if let Statement::Volatile(Instruction::Ret(Some((ty, val)))) = statement {
+                    if first_ty.is_none() {
+                        first_ty = Some(ty.clone());
 
-                            if let Some(real_return_type) = func_ref.borrow().return_type.clone() {
-                                handle_inconsistent_types!(real_return_type, ty)
-                            }
-                        } else {
-                            let return_type = ty.clone();
-                            let first_type = first_ty.clone().unwrap();
+                        if let Some(real_return_type) = func_ref.borrow().return_type.clone() {
+                            handle_inconsistent_types!(real_return_type, ty)
+                        }
+                    } else {
+                        let return_type = ty.clone();
+                        let first_type = first_ty.clone().unwrap();
 
-                            if let Some(real_return_type) = func_ref.borrow().return_type.clone() {
-                                handle_inconsistent_types!(real_return_type, return_type)
-                            }
+                        if let Some(real_return_type) = func_ref.borrow().return_type.clone() {
+                            handle_inconsistent_types!(real_return_type, return_type)
+                        }
 
-                            if return_type != first_type
-                                && !matches!(val, Value::Const(_, _))
-                                && !(maybe_void_pointer!(return_type, first_type))
-                            {
-                                panic!(
+                        if return_type != first_type
+                            && !matches!(val, Value::Const(_, _))
+                            && !(maybe_void_pointer!(return_type, first_type))
+                        {
+                            panic!(
                                     "{}",
                                     ty_err_message!(
                                         ty.display(),
@@ -545,7 +492,6 @@ impl CodeGen {
                                         ))
                                     )
                                 )
-                            }
                         }
                     }
                 }
@@ -624,17 +570,8 @@ impl CodeGen {
         item: LetBinding,
     ) -> Option<(Type, Value)> {
         let name: ImutStr = lookup!(item.ident.name).into();
-        // let existing = match self.get_variable(&name, Some(func), Some(module)) {
-        //     Ok((ty, _)) => ty,
-        //     Err(_) => Type::Word,
-        // };
-
-        // if self.get_variable(&name, Some(func), Some(module)).is_err() {
-        //     panic!("Variable named '{}' hasn't been declared yet.", name);
-        // }
-
         let mut local_ty = Self::ast_type_to_type(item.ty);
-        let mut temp = Some(self.new_variable(&local_ty, name.clone(), Some(func), false, false));
+        let mut temp = Some(self.new_variable(&local_ty, name.clone(), false, false));
 
         let parsed = self.generate_expr(
             func,
@@ -656,7 +593,7 @@ impl CodeGen {
                 })
             {
                 local_ty = ret_ty.clone();
-                temp = Some(self.new_variable(&local_ty, name.clone(), Some(func), false, false))
+                temp = Some(self.new_variable(&local_ty, name.clone(), false, false))
             }
 
             let (final_ty, final_val) = if ret_ty != local_ty {
@@ -665,13 +602,8 @@ impl CodeGen {
                 (local_ty.clone(), value.clone())
             };
 
-            let addr_val = self.new_variable(
-                &local_ty,
-                format!("{}.addr", name).into(),
-                Some(func),
-                true,
-                false,
-            );
+            let addr_val =
+                self.new_variable(&local_ty, format!("{}.addr", name).into(), true, false);
 
             func.borrow_mut().assign_instruction_front(
                 &addr_val,
@@ -797,7 +729,6 @@ impl CodeGen {
                             );
                         }
                     }
-                    _ => {}
                 };
 
                 Some((operand_ty, temp))
@@ -810,13 +741,12 @@ impl CodeGen {
                 ..
             } => {
                 let name = self.convert_assign_target_to_name(target);
-                let (local_ty, local_val) = match self.get_variable(&name, Some(func), Some(module))
-                {
+                let (local_ty, local_val) = match self.get_variable(&name, Some(module)) {
                     Ok((ty, val)) => (ty, val),
                     Err(_) => panic!("Undeclared variable"),
                 };
 
-                if self.get_variable(&name, Some(func), Some(module)).is_err() {
+                if self.get_variable(&name, Some(module)).is_err() {
                     panic!("Variable named '{}' hasn't been declared yet.", name);
                 }
 
@@ -829,15 +759,8 @@ impl CodeGen {
                 }
 
                 let temp = self.new_temporary(None, false);
-                let parsed = self.generate_expr(
-                    func,
-                    module,
-                    *expr,
-                    &Some(local_ty.clone()),
-                    None,
-                    // Some(temp.clone()),
-                    false,
-                );
+                let parsed =
+                    self.generate_expr(func, module, *expr, &Some(local_ty.clone()), None, false);
 
                 if let Some((_, value)) = parsed {
                     let temp2 = self.new_temporary(None, false);
@@ -850,12 +773,6 @@ impl CodeGen {
                                 Instruction::Load(local_ty.clone(), address.clone()),
                             );
                         }
-                        //
-                        // func.borrow_mut().assign_instruction(
-                        //     &temp2,
-                        //     &local_ty,
-                        //     Instruction::Copy(temp2.clone()),
-                        // );
 
                         match operator {
                             AssignOp::Assign => {
@@ -1008,11 +925,6 @@ impl CodeGen {
                                 panic!("Continue can only be used in a loop.");
                             };
                         }
-                        _ => todo!(), // ast::BlockItem::Expr { expr, .. } => match expr {
-                                      //     Expr::Literal { .. } => {}
-                                      //     _ => {}
-                                      // },
-                                      // _ => {}
                     };
                 }
 
@@ -1094,11 +1006,6 @@ impl CodeGen {
                                 panic!("Continue can only be used in a loop.");
                             };
                         }
-                        _ => todo!(), // ast::BlockItem::Expr { expr, .. } => match expr {
-                                      //     Expr::Literal { .. } => {}
-                                      //     _ => {}
-                                      // },
-                                      // _ => {}
                     };
                 }
 
@@ -1176,7 +1083,6 @@ impl CodeGen {
                                 panic!("Continue can only be used in a loop.");
                             };
                         }
-                        _ => todo!(), // ast::BlockItem::Expr { expr, .. } => match expr {
                     };
                 }
 
@@ -1236,12 +1142,6 @@ impl CodeGen {
                                         panic!("Continue can only be used in a loop.");
                                     };
                                 }
-
-                                _ => todo!(), // ast::BlockItem::Expr { expr, .. } => match expr {
-                                              //     Expr::Literal { .. } => {}
-                                              //     _ => {}
-                                              // },
-                                              // _ => {}
                             };
                         }
 
@@ -1265,9 +1165,7 @@ impl CodeGen {
                     }
                 };
 
-                // func.borrow_mut().add_block(end_label);
                 self.scopes.pop();
-
                 None
             }
             Expr::Paren { expr, .. } => {
@@ -1412,8 +1310,8 @@ impl CodeGen {
             ),
             Expr::Literal { value, .. } => match value {
                 LiteralValue::String(val) => {
-                    // Some((Type::Null, Value::Literal(lookup!(val).into())))
                     self.temp_count += 1;
+
                     let name =
                         self.tmp_name_with_debug_assertions(&func.borrow_mut().name.clone(), true);
 
@@ -1505,12 +1403,13 @@ impl CodeGen {
                 right,
                 ..
             } => {
+                let ctx = Context { module, func };
+
                 if matches!(operator, BinaryOp::And | BinaryOp::Or) {
                     return Some(self.handle_short_circuiting_operation(
-                        left,
-                        right,
-                        func,
-                        module,
+                        *left,
+                        *right,
+                        &ctx,
                         ty.clone(),
                         is_return,
                         operator,
@@ -1523,32 +1422,30 @@ impl CodeGen {
                 let mut left_val = left_val_unparsed.clone();
                 let mut right_val = right_val_unparsed.clone();
 
-                if operator != BinaryOp::Concat {
-                    if left_ty.is_string() && right_ty == Type::Char {
-                        let char_tmp = self.new_temporary(None, true);
+                if left_ty.is_string() && right_ty == Type::Char {
+                    let char_tmp = self.new_temporary(None, true);
 
-                        func.borrow_mut().assign_instruction(
-                            &char_tmp,
-                            &Type::Char,
-                            Instruction::Load(Type::Char, left_val),
-                        );
+                    func.borrow_mut().assign_instruction(
+                        &char_tmp,
+                        &Type::Char,
+                        Instruction::Load(Type::Char, left_val),
+                    );
 
-                        left_ty = Type::Char;
-                        left_val = char_tmp;
-                    }
+                    left_ty = Type::Char;
+                    left_val = char_tmp;
+                }
 
-                    if right_ty.is_string() && left_ty == Type::Char {
-                        let char_tmp = self.new_temporary(None, true);
+                if right_ty.is_string() && left_ty == Type::Char {
+                    let char_tmp = self.new_temporary(None, true);
 
-                        func.borrow_mut().assign_instruction(
-                            &char_tmp,
-                            &Type::Char,
-                            Instruction::Load(Type::Char, right_val),
-                        );
+                    func.borrow_mut().assign_instruction(
+                        &char_tmp,
+                        &Type::Char,
+                        Instruction::Load(Type::Char, right_val),
+                    );
 
-                        right_ty = Type::Char;
-                        right_val = char_tmp;
-                    }
+                    right_ty = Type::Char;
+                    right_val = char_tmp;
                 }
 
                 match left_ty.weight().cmp(&right_ty.weight()) {
@@ -1577,46 +1474,6 @@ impl CodeGen {
                     }
                     _ => {}
                 }
-
-                // CONCAT OPERATION
-                // if left_ty.is_string() && right_ty.is_string() {
-                //     let mut kind = None;
-                //
-                //     match operator {
-                //         BinaryOp::Concat => {
-                //             kind = Some(("concat", true, Type::Pointer(Box::new(Type::Char))))
-                //         }
-                //         _ => {}
-                //     }
-                //
-                //     if let Some((kind, has_meta, ty)) = kind {
-                //         // TODO: extend this idea to more than just strings?
-                //         // ideally add a .equals method on any primitive to make it equatable, and
-                //         // implement it for each same for any struct, define a .equals method to
-                //         // allow it to be ran with == directly.
-                //         let func_name = format!("string.{kind}");
-                //         let module_ref = module.borrow();
-                //
-                //         let tmp_function_option = module_ref
-                //             .functions
-                //             .iter()
-                //             .find(|func| *func.name == func_name.into());
-                //
-                //         if tmp_function_option.is_none() {
-                //             panic!(
-                //                 "Cannot use the {:?} operator because the string module is not imported.\nPlease import it with `import std/string;` at the top of this file.",
-                //                 operator
-                //             )
-                //         }
-                //
-                //         let tmp_function = tmp_function_option.unwrap().clone();
-                //         let mut params = vec![(left_ty, left_val), (right_ty, right_val)];
-                //
-                //         if has_meta {
-                //             let meta =
-                //         }
-                //     }
-                // }
 
                 if [
                     BinaryOp::Xor,
@@ -1698,7 +1555,7 @@ impl CodeGen {
                     let ty = tmp_func.return_type.clone().unwrap_or(declarative_type);
                     let temp = self.new_temporary(None, true);
                     let val = self
-                        .get_variable(&name, Some(func), Some(module))
+                        .get_variable(&name, Some(module))
                         .unwrap_or((Type::Long, Value::Global(name.clone())))
                         .1;
 
@@ -1706,26 +1563,8 @@ impl CodeGen {
                         self.generate_expr(func, module, arg.clone(), &None, None, false).unwrap_or_else(|| panic!("Unexpected error when trying to generate a statement for a argument in a function called '{}'", name))
                     }).collect();
 
-                    func.borrow_mut().assign_instruction(
-                        &temp,
-                        &ty,
-                        Instruction::Call(
-                            val,
-                            args,
-                            // args.iter()
-                            //     .map(|arg| {
-                            //         // let mut tmp_func = Function::default();
-                            //         // tmp_func.add_block("start");
-                            //
-                            //         // let dodo =  self.generate_expr(&RefCell::new(tmp_func), module, arg.clone(), &None, None, false).unwrap_or_else(|| panic!("Unexpected error when trying to generate a statement for a argument in a function called '{}'", name));
-                            //         // let dodo =  self.generate_expr(func, module, arg.clone(), &None, None, false).unwrap_or_else(|| panic!("Unexpected error when trying to generate a statement for a argument in a function called '{}'", name));
-                            //         // println!("{dodo:#?} {arg:#?}");
-                            //
-                            //         dodo
-                            //     })
-                            //     .collect(),
-                        ),
-                    );
+                    func.borrow_mut()
+                        .assign_instruction(&temp, &ty, Instruction::Call(val, args));
 
                     Some((ty, temp))
                 } else {
@@ -1734,11 +1573,6 @@ impl CodeGen {
             }
             _ => None,
         };
-
-        // return it
-        // if is_return && func.borrow().returns_at_all() {
-        //     panic!("Tried returning from a function that already has a return.");
-        // }
 
         if is_return {
             func.borrow_mut()
@@ -1854,10 +1688,9 @@ impl CodeGen {
 
     fn handle_short_circuiting_operation(
         &mut self,
-        left: Box<Expr>,
-        right: Box<Expr>,
-        func: &RefCell<Function>,
-        module: &RefCell<Module>,
+        left: Expr,
+        right: Expr,
+        ctx: &Context,
         ty: Option<Type>,
         is_return: bool,
         operator: BinaryOp,
@@ -1872,8 +1705,10 @@ impl CodeGen {
 
         let result_tmp = self.new_temporary(Some(&operator.to_string()), true);
 
+        let (func, module) = (ctx.func, ctx.module);
+
         let (left_ty, left_val) = self
-            .generate_expr(func, module, *left, &ty.clone(), None, is_return)
+            .generate_expr(func, module, left, &ty.clone(), None, is_return)
             .expect("Unexpected error when trying to parse left side of an arithmetic operation");
 
         func.borrow_mut().assign_instruction(
@@ -1930,7 +1765,7 @@ impl CodeGen {
         func.borrow_mut().add_block(right_label);
 
         let (_, right_val) = self
-            .generate_expr(func, module, *right, &ty.clone(), None, is_return)
+            .generate_expr(func, module, right, &ty.clone(), None, is_return)
             .expect("Unexpected error when trying to parse right side of an arithmetic operation");
 
         let right_tmp = self.new_temporary(Some(&format!("{}.right", operator)), true);

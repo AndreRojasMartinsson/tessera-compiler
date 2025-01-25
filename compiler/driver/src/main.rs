@@ -2,8 +2,8 @@ use std::fs;
 use std::io::Write;
 use std::path::Path;
 use std::process;
-use std::process::Stdio;
 use std::process::exit;
+use std::process::Stdio;
 use std::str;
 
 use args::Command;
@@ -12,8 +12,8 @@ use context::Context;
 use lexer::Kind;
 use lexer::Lexer;
 use memmap2::Mmap;
-use miette::IntoDiagnostic;
 use miette::miette;
+use miette::IntoDiagnostic;
 use parser::parser::Parser;
 use type_solver::TypeSolver;
 
