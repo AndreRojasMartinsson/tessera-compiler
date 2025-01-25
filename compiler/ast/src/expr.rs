@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use interner::Atom;
 use lexer::{
     operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp},
