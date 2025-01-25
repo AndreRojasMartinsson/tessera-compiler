@@ -3,5 +3,3 @@ linker = "clang"
 rustflags = ["-C", "link-arg=-fuse-ld=mold", "-C", "target-cpu=native"]
 
 [build]
-# rustc-wrapper = "sccache"
-# rustc-workspace-wrapper = "sccache"
