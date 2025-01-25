@@ -1,5 +1,5 @@
 use gxhash::{HashMap, HashMapExt};
-use interner::{Atom, lookup};
+use interner::{lookup, Atom};
 use lexer::operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp};
 use node::Node;
 use std::{cell::RefCell, cmp::Ordering, fs::File, io::Write, primitive};
@@ -9,8 +9,8 @@ use ast::{
     LiteralValue, Parameter, Program, ProgramItem, Ty, Type as AstType,
 };
 use ir_builder::{
-    Argument, Block, Cmp, Data, DataItem, Function, GC_NOOP, ImutStr, Instruction, Linkage, Module,
-    Prefix, Primitive, Statement, StructPool, Type, Value,
+    Argument, Block, Cmp, Data, DataItem, Function, ImutStr, Instruction, Linkage, Module, Prefix,
+    Primitive, Statement, StructPool, Type, Value, GC_NOOP,
 };
 
 mod builder;
@@ -147,7 +147,8 @@ impl CodeGen {
         }
         // file.flush().map_err(|_| "Failed to flush file.")?;
 
-        Ok(module_ref.borrow().to_string())
+        let ir = module_ref.borrow().to_string();
+        Ok(ir)
     }
 
     fn tmp_name_with_debug_assertions(&self, name: &ImutStr, minify: bool) -> String {
