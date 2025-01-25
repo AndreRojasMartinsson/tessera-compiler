@@ -466,7 +466,7 @@ impl Type {
             ]
             .contains(&id.as_str())
             {
-                "-1".parse::<u8>() // Throw an artificial error
+                "-1".parse::<u8>()
             } else {
                 id.parse::<u8>()
             }
