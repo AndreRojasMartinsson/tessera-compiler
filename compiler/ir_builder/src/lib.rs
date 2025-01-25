@@ -211,22 +211,6 @@ impl Function {
                 )
             })
         })
-        // self.blocks
-        //     .iter()
-        //     .find(|block| {
-        //         block
-        //             .statements
-        //             .iter()
-        //             .find(|i| {
-        //                 matches!(
-        //                     i,
-        //                     Statement::Volatile(Instruction::Ret(_))
-        //                         | Statement::Volatile(Instruction::Hlt)
-        //                 )
-        //             })
-        //             .is_some()
-        //     })
-        //     .is_some()
     }
 
     pub fn returns(&self) -> bool {
@@ -290,15 +274,12 @@ pub enum Type {
     Single,
     /// `d` -- 64-bit floating point number
     Double,
-    /// `char` -- Aggregate type?
     Char,
-    /// `void` -- Aggregate type?
     Void,
-    /// `null` -- Aggregate type?
     Null,
-    /// `string` or `{TY}*` -- Aggregate type?
+    /// `string` or `{TY}*`
     Pointer(Box<Type>),
-    /// `{name}<{}>` -- Aggregate type
+    /// `{name}<{}>`
     Struct(ImutStr),
     /// `{name}` -- Unknown type
     Unknown(ImutStr),
