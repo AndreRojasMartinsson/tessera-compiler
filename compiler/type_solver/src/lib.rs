@@ -181,6 +181,9 @@ impl TypeSolver<'_> {
             Expr::Assign { expr, .. } => {
                 self.solve_expr(false, *expr);
             }
+            Expr::Paren { expr, .. } => {
+                self.solve_expr(_semicolon, *expr);
+            }
 
             c => unreachable!("{c:#?}"),
         }

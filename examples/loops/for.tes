@@ -1,0 +1,25 @@
+func double fibonnaci(u32: n) {
+  if n <= 1 {
+    n
+  };
+
+  let curr: double = 0;
+  let prev1: double = 1;
+  let prev2: double = 0;
+
+  for let i: u32 = 2, i <= n, i++ {
+    curr = prev1 + prev2;
+    prev2 = prev1;
+    prev1 = curr;
+  };
+
+  curr
+}
+
+pub func i32 main() {
+  let res: double = fibonnaci((double)60);
+
+  out "fibonnaci (5) = %f\n" res;
+
+  0
+}
