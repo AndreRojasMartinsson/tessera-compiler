@@ -1,6 +1,6 @@
 func double fibonnaci(u32: n) {
   if n <= 1 {
-    n
+    return (double)n;
   };
 
   let curr: double = 0;
@@ -17,7 +17,7 @@ func double fibonnaci(u32: n) {
 }
 
 pub func i32 main() {
-  let res: double = fibonnaci((double)60);
+  let res: double = fibonnaci(30);
 
   out "fibonnaci (5) = %f\n" res;
 

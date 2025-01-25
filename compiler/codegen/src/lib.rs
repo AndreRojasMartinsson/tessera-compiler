@@ -467,6 +467,7 @@ impl CodeGen {
                         first_ty = Some(ty.clone());
 
                         if let Some(real_return_type) = func_ref.borrow().return_type.clone() {
+                            println!("{:?} {:?} {:?}", real_return_type, ty, val);
                             handle_inconsistent_types!(real_return_type, ty)
                         }
                     } else {
@@ -1300,14 +1301,23 @@ impl CodeGen {
 
                 None
             }
-            Expr::Cast { ty, expr, .. } => self.generate_expr(
-                func,
-                module,
-                *expr,
-                &Some(Self::ast_type_to_type(ty)),
-                None,
-                false,
-            ),
+            Expr::Cast { ty, expr, .. } => {
+                let value = self.generate_expr(func, module, *expr, &None, None, false);
+
+                if let Some((val_ty, val_val)) = value {
+                    let dodo = self.convert_to_type(
+                        func,
+                        val_ty,
+                        Self::ast_type_to_type(ty),
+                        val_val,
+                        true,
+                    );
+
+                    return Some((dodo.0, dodo.1));
+                }
+
+                return value;
+            }
             Expr::Literal { value, .. } => match value {
                 LiteralValue::String(val) => {
                     self.temp_count += 1;
@@ -1468,7 +1478,6 @@ impl CodeGen {
                             left_val_unparsed,
                             false,
                         );
-
                         left_ty = ty;
                         left_val = val;
                     }
@@ -1668,6 +1677,7 @@ impl CodeGen {
                         Instruction::Copy(val)
                     }
                 } else {
+                    println!("{:?} {:?}", first, val);
                     Instruction::Ext(first, val)
                 },
             );

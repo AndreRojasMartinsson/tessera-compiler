@@ -1055,10 +1055,10 @@ pub enum Cmp {
 impl Display for Cmp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Lt => write!(f, "slt"),
-            Self::Lte => write!(f, "sle"),
-            Self::Gt => write!(f, "sgt"),
-            Self::Gte => write!(f, "sge"),
+            Self::Lt => write!(f, "lt"),
+            Self::Lte => write!(f, "le"),
+            Self::Gt => write!(f, "gt"),
+            Self::Gte => write!(f, "ge"),
             Self::Eq => write!(f, "eq"),
             Self::Neq => write!(f, "ne"),
         }
@@ -1459,12 +1459,21 @@ impl fmt::Display for Instruction {
                 write!(
                     f,
                     "c{}{} {}, {}",
-                    if ty.is_float() || ty.is_unsigned() {
+                    if ty.is_float() {
                         match cmp {
                             Cmp::Lt => "lt",
                             Cmp::Lte => "le",
                             Cmp::Gt => "gt",
                             Cmp::Gte => "ge",
+                            Cmp::Eq => "eq",
+                            Cmp::Neq => "ne",
+                        }
+                    } else if ty.is_unsigned() {
+                        match cmp {
+                            Cmp::Lt => "ult",
+                            Cmp::Lte => "ule",
+                            Cmp::Gt => "ugt",
+                            Cmp::Gte => "uge",
                             Cmp::Eq => "eq",
                             Cmp::Neq => "ne",
                         }
@@ -1545,7 +1554,7 @@ impl fmt::Display for Instruction {
             Self::Ext(ty, val) => write!(
                 f,
                 "ext{} {}",
-                if ty.is_float() {
+                if ty.is_float() || ty.is_unsigned() {
                     ty.to_string()
                 } else {
                     format!("s{}", ty)
