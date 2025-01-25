@@ -4,8 +4,6 @@ use crate::Kind;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PostfixOp {
-    /// !,
-    Fac,
     /// ++,
     Increment,
     /// --,
@@ -149,7 +147,6 @@ impl Display for BinaryOp {
 impl PostfixOp {
     pub fn from_kind(kind: Kind) -> Option<Self> {
         match kind {
-            Kind::Bang => Some(Self::Fac),
             Kind::Increment => Some(Self::Increment),
             Kind::Decrement => Some(Self::Decrement),
             _ => None,
