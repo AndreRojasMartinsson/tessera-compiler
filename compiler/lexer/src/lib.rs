@@ -195,7 +195,7 @@ mod tests {
 
     #[test]
     fn test_ints() {
-        let input = "45 679 3206 0 1";
+        let input = "45 679 3206 0 1 0 5 459 0";
         let mut lexer = Lexer::new(input);
         let expected = vec![
             (Kind::IntLiteral, Some("45")),
@@ -203,6 +203,10 @@ mod tests {
             (Kind::IntLiteral, Some("3206")),
             (Kind::IntLiteral, Some("0")),
             (Kind::IntLiteral, Some("1")),
+            (Kind::IntLiteral, Some("0")),
+            (Kind::IntLiteral, Some("5")),
+            (Kind::IntLiteral, Some("459")),
+            (Kind::IntLiteral, Some("0")),
         ];
 
         for (kind, lexeme) in expected {

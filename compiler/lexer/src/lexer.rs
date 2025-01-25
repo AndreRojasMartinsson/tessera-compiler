@@ -205,6 +205,8 @@ impl<'ctx> Lexer<'ctx> {
     }
 
     fn read_number_starting_with_zero(&mut self) -> Result<KindResult, LexerError> {
+        self.chars.next();
+
         match self.peek() {
             Some('.') => {
                 self.chars.next();
@@ -216,10 +218,7 @@ impl<'ctx> Lexer<'ctx> {
                 self.read_decimal_exponent()?;
                 Ok(KindResult::Kind(Kind::FloatLiteral))
             }
-            _ => {
-                self.chars.next();
-                Ok(KindResult::Kind(Kind::IntLiteral))
-            }
+            _ => Ok(KindResult::Kind(Kind::IntLiteral)),
         }
     }
 
