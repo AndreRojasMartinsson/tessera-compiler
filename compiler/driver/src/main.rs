@@ -103,11 +103,12 @@ fn compile_file(
                 .expect("Could not generate binary");
 
             if !emit_asm {
-                fs::remove_file(output_dir.join("out.s")).expect("Could not remove file");
+                fs::remove_file(output_dir.join(format!("{}.s", basename.to_str().unwrap())))
+                    .expect("Could not remove file");
             }
 
             if run {
-                let output = process::Command::new(output_dir.join("main"))
+                let output = process::Command::new(output_dir.join(basename))
                     .output()
                     .unwrap();
 

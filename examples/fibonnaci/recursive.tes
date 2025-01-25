@@ -26,5 +26,7 @@ pub func i32 main() {
     1
   };
 
+  out "Ran successfully!";
+
   0
 }
