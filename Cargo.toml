@@ -6,7 +6,7 @@ default-members = ["compiler/driver"]
 [workspace.package]
 authors = ["AndreRojasMartinsson"]
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [workspace.dependencies]
 interner = {path = "compiler/interner"}
