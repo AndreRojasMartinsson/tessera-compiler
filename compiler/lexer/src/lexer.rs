@@ -6,7 +6,7 @@ use diagnostics::errors::lexer::{
 };
 use interner::intern;
 
-use crate::{Kind, Token, value::Value};
+use crate::{value::Value, Kind, Token};
 
 pub struct Lexer<'ctx> {
     source: &'ctx str,
@@ -118,7 +118,6 @@ impl<'ctx> Lexer<'ctx> {
                     Some(_) | None => return self.flush_single(Kind::Gt),
                 },
                 '<' => match self.peek_n(1) {
-                    Some('>') => return self.flush(Kind::Concat, 2),
                     Some('=') => return self.flush(Kind::Lte, 2),
                     Some('<') => match self.peek_n(2) {
                         Some('=') => return self.flush(Kind::ShlAssign, 3),

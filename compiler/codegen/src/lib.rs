@@ -1523,32 +1523,30 @@ impl CodeGen {
                 let mut left_val = left_val_unparsed.clone();
                 let mut right_val = right_val_unparsed.clone();
 
-                if operator != BinaryOp::Concat {
-                    if left_ty.is_string() && right_ty == Type::Char {
-                        let char_tmp = self.new_temporary(None, true);
+                if left_ty.is_string() && right_ty == Type::Char {
+                    let char_tmp = self.new_temporary(None, true);
 
-                        func.borrow_mut().assign_instruction(
-                            &char_tmp,
-                            &Type::Char,
-                            Instruction::Load(Type::Char, left_val),
-                        );
+                    func.borrow_mut().assign_instruction(
+                        &char_tmp,
+                        &Type::Char,
+                        Instruction::Load(Type::Char, left_val),
+                    );
 
-                        left_ty = Type::Char;
-                        left_val = char_tmp;
-                    }
+                    left_ty = Type::Char;
+                    left_val = char_tmp;
+                }
 
-                    if right_ty.is_string() && left_ty == Type::Char {
-                        let char_tmp = self.new_temporary(None, true);
+                if right_ty.is_string() && left_ty == Type::Char {
+                    let char_tmp = self.new_temporary(None, true);
 
-                        func.borrow_mut().assign_instruction(
-                            &char_tmp,
-                            &Type::Char,
-                            Instruction::Load(Type::Char, right_val),
-                        );
+                    func.borrow_mut().assign_instruction(
+                        &char_tmp,
+                        &Type::Char,
+                        Instruction::Load(Type::Char, right_val),
+                    );
 
-                        right_ty = Type::Char;
-                        right_val = char_tmp;
-                    }
+                    right_ty = Type::Char;
+                    right_val = char_tmp;
                 }
 
                 match left_ty.weight().cmp(&right_ty.weight()) {
@@ -1577,46 +1575,6 @@ impl CodeGen {
                     }
                     _ => {}
                 }
-
-                // CONCAT OPERATION
-                // if left_ty.is_string() && right_ty.is_string() {
-                //     let mut kind = None;
-                //
-                //     match operator {
-                //         BinaryOp::Concat => {
-                //             kind = Some(("concat", true, Type::Pointer(Box::new(Type::Char))))
-                //         }
-                //         _ => {}
-                //     }
-                //
-                //     if let Some((kind, has_meta, ty)) = kind {
-                //         // TODO: extend this idea to more than just strings?
-                //         // ideally add a .equals method on any primitive to make it equatable, and
-                //         // implement it for each same for any struct, define a .equals method to
-                //         // allow it to be ran with == directly.
-                //         let func_name = format!("string.{kind}");
-                //         let module_ref = module.borrow();
-                //
-                //         let tmp_function_option = module_ref
-                //             .functions
-                //             .iter()
-                //             .find(|func| *func.name == func_name.into());
-                //
-                //         if tmp_function_option.is_none() {
-                //             panic!(
-                //                 "Cannot use the {:?} operator because the string module is not imported.\nPlease import it with `import std/string;` at the top of this file.",
-                //                 operator
-                //             )
-                //         }
-                //
-                //         let tmp_function = tmp_function_option.unwrap().clone();
-                //         let mut params = vec![(left_ty, left_val), (right_ty, right_val)];
-                //
-                //         if has_meta {
-                //             let meta =
-                //         }
-                //     }
-                // }
 
                 if [
                     BinaryOp::Xor,

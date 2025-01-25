@@ -94,7 +94,6 @@ mod tests {
             (Kind::OrAssign, Some("|=")),
             (Kind::Shl, Some("<<")),
             (Kind::Shr, Some(">>")),
-            (Kind::Concat, Some("<>")),
             (Kind::Gte, Some(">=")),
             (Kind::Lte, Some("<=")),
             (Kind::LogicalAnd, Some("&&")),

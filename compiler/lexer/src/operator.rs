@@ -96,50 +96,29 @@ pub enum BinaryOp {
     LogAnd,
     /// ||,
     LogOr,
-    /// <>
-    Concat,
 }
 
 impl Display for BinaryOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Equal => write!(f, "=="),
-
             Self::NotEqual => write!(f, "!="),
-
             Self::Add => write!(f, "+"),
-
             Self::Sub => write!(f, "-"),
-
             Self::Mul => write!(f, "*"),
-
             Self::Div => write!(f, "/"),
-
             Self::Rem => write!(f, "%"),
-
             Self::And => write!(f, "&"),
-
             Self::Or => write!(f, "|"),
-
             Self::Xor => write!(f, "^"),
-
             Self::Lt => write!(f, "<"),
-
             Self::Gt => write!(f, ">"),
-
             Self::Gte => write!(f, ">="),
-
             Self::Lte => write!(f, "<="),
-
             Self::Shl => write!(f, "<<"),
-
             Self::Shr => write!(f, ">>"),
-
             Self::LogAnd => write!(f, "&&"),
-
             Self::LogOr => write!(f, "||"),
-
-            Self::Concat => write!(f, "<>"),
         }
     }
 }
@@ -210,7 +189,6 @@ impl BinaryOp {
             Kind::Shr => Some(Self::Shr),
             Kind::LogicalAnd => Some(Self::LogAnd),
             Kind::LogicalOr => Some(Self::LogOr),
-            Kind::Concat => Some(Self::Concat),
             _ => None,
         }
     }

@@ -4,11 +4,11 @@ use ast::{
     AssignTarget, Block, BlockItem, Expr, ForInit, Identifier, IfAlternate, IfExpr, LetBinding,
     LiteralValue, MemberExpr, MemberTy, Parameter, Program, ProgramItem, Ty, Type,
 };
-use interner::{Atom, lookup};
+use interner::{lookup, Atom};
 use lexer::{
-    Kind, Token,
     operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp},
     value::Value,
+    Kind, Token,
 };
 use node::Node;
 use symbols::{FunctionSymbol, Mutability, Symbol, SymbolTable, VariableSymbol, Visibility};
@@ -420,9 +420,8 @@ impl<'ctx> Parser<'ctx> {
             Kind::Equal | Kind::NotEqual => 6,
             Kind::Lt | Kind::Gt | Kind::Gte | Kind::Lte => 7,
             Kind::Shl | Kind::Shr => 8,
-            Kind::Concat => 9,
-            Kind::Plus | Kind::Dash => 10,
-            Kind::Asterisk | Kind::Slash | Kind::Percent => 11,
+            Kind::Plus | Kind::Dash => 9,
+            Kind::Asterisk | Kind::Slash | Kind::Percent => 10,
             _ => unreachable!(),
         }
     }
