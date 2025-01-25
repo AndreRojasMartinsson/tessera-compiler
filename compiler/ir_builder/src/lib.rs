@@ -386,7 +386,6 @@ impl Type {
                 }
             }
             Self::Unknown(name) => Rc::clone(name),
-            _ => unreachable!(),
         }
     }
 
@@ -799,7 +798,6 @@ impl fmt::Display for Type {
             Self::Struct(td) => write!(f, ":{}", td),
             Self::Function(_) => write!(f, "l"),
             Self::Unknown(name) => panic!("Tried to compile with a generic type {name}"),
-            _ => unreachable!(),
         }
     }
 }
@@ -877,7 +875,6 @@ impl TypeDef {
     pub fn size(&self, module: &RefCell<Module>) -> usize {
         let mut size = 0;
 
-        // for (ty, _) in self.items.iter().cloned() {
         for (ty, _) in self.items.iter() {
             if ty.is_struct() {
                 let tmp_size = module
