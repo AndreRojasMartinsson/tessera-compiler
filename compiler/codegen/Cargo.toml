@@ -1,0 +1,18 @@
+[package]
+name = "codegen"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+context.workspace = true
+diagnostics.workspace = true
+lexer.workspace = true
+ast.workspace = true
+parser.workspace = true
+ir_builder.workspace = true
+type_solver.workspace = true
+interner.workspace = true
+node.workspace = true
+symbols.workspace = true 
+gxhash = "3.4.1"

@@ -1,0 +1,7 @@
+[package]
+name = "node"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]

@@ -1,0 +1,8 @@
+[package]
+name = "interner"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+gxhash = "3.4.1"

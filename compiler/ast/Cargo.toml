@@ -1,0 +1,10 @@
+[package]
+name = "ast"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+node.workspace = true
+interner.workspace = true
+lexer.workspace = true

@@ -1,0 +1,9 @@
+[package]
+name = "diagnostics"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+miette = { version = "7.4.0", features = ["fancy", "syntect-highlighter", "derive"] }
+thiserror = "2.0.11"

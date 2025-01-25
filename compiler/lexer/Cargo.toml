@@ -1,0 +1,10 @@
+[package]
+name = "lexer"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+context.workspace = true
+diagnostics.workspace = true
+interner.workspace = true

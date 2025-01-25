@@ -1,0 +1,30 @@
+func i64 fib_rec(i64: n) {
+  if n <= 1 {
+    n
+  } else {
+    fib_rec(n - 1) + fib_rec(n - 2)
+  };
+}
+
+pub func i32 main() {
+  let fib_5: i64 = fib_rec(5);
+  let fib_20: i64 = fib_rec(20);
+  let fib_45: i64 = fib_rec(45);
+
+  if fib_5 != 5 {
+    out "ASSERTION: Left != Right.\nLeft: %d\nRight: %d\n" fib_5, 5;
+    1
+  };
+
+  if fib_20 != 6765 {
+    out "ASSERTION: Left != Right.\nLeft: %d\nRight: %d\n" fib_20, 6765;
+    1
+  };
+
+  if fib_45 != 1134903170 {
+    out "ASSERTION: Left != Right.\nLeft: %d\nRight: %d\n" fib_45, 1134903170;
+    1
+  };
+
+  0
+}

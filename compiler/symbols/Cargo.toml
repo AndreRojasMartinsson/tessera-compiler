@@ -1,0 +1,12 @@
+[package]
+name = "symbols"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+gxhash = "3.4.1"
+interner.workspace = true
+ast.workspace = true
+uuid = { version = "1.12.0", features = ["fast-rng", "v4"] }
+qbe = "2.3.0"

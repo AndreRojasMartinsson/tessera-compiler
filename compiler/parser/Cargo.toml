@@ -1,0 +1,14 @@
+[package]
+name = "parser"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+symbols.workspace = true
+node.workspace = true
+lexer.workspace = true
+interner.workspace = true
+diagnostics.workspace = true
+context.workspace = true
+ast.workspace = true

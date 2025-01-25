@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = [ "compiler/ast", "compiler/codegen", "compiler/context", "compiler/diagnostics","compiler/driver", "compiler/interner", "compiler/ir_builder", "compiler/lexer", "compiler/node", "compiler/parser", "compiler/symbols", "compiler/type_solver"]
+default-members = ["compiler/driver"]
+
+[workspace.package]
+authors = ["AndreRojasMartinsson"]
+version = "0.1.0"
+edition = "2024"
+
+[workspace.dependencies]
+interner = {path = "compiler/interner"}
+symbols = {path = "compiler/symbols"}
+diagnostics = {path = "compiler/diagnostics"}
+type_solver = {path = "compiler/type_solver"}
+context = {path = "compiler/context"}
+ir_builder = {path = "compiler/ir_builder"}
+ast = {path = "compiler/ast"}
+codegen = {path = "compiler/codegen"}
+parser = {path = "compiler/parser"}
+node = {path = "compiler/node"}
+lexer = {path = "compiler/lexer"}
+color-eyre = "0.6.3"
+log = "0.4.25"

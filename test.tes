@@ -1,0 +1,99 @@
+# func double add(double: a, double: b) {
+#   a + b
+# }
+
+# func i64 fib_rec(i64: n) {
+#   if n <= 1 {
+#     n
+#   };
+#
+#   fib_rec(n - 1) + fib_rec(n - 2)
+# }
+
+func i64 fib_iter(i64: n) {
+  if n <= 1 {
+    n
+  } else {
+    let curr: i64 = 0;
+    let prev1: i64 = 1;
+    let prev2: i64 = 0;
+
+    for let i: i64 = 2, i <= n, i++ {
+      curr = prev1 + prev2;
+      prev2 = prev1;
+      prev1 = curr;
+    };
+
+    curr
+  }
+}
+
+pub func i64 main() {
+  # let result: double = (5.5 + 5.5 / (u32)3) - 1.5;
+  #
+  # for let i: i64 = 10, i > 0, i-- {
+  #   out "i = %d\n" i;
+  # };
+  #
+  let fib_res: i64 = fib_iter(45);
+   out "fib_res = %d\n" fib_res;
+
+
+  # let int_result: i64 = result;
+  # let add_result: double = add(50.0, 50.0);
+  #
+  # out "Add Result = %f\n" add_result;
+  #
+  # let i: i32 = 0;
+  #
+  # if result > 6.5 {
+  #   out "Result is greater than 6.5\n";
+  # } else if result > 6 {
+  #   out "Result is greater than 6\n";
+  # } else {
+  #   out "Result is less than or equal 6\n";
+  # };
+  #
+  # out "Result: %f\n" result;
+  # out "Result: %d\n" int_result;
+
+  0
+}
+
+# pub func double add(double: a, double: b) {
+#   let result: double = a + b;
+#
+#   result
+# }
+#
+# pub func u32 hello() {
+#   let n: single = (single)40;
+#
+#   for let i: u32 = 0, i < 10, ++i {
+#     out "i = %d\n" i;
+#   }
+#
+#   let blud: double = 40.5;
+#
+#   if n <= 1 {
+#     out "%d" <> "\n" n;
+#   } else {
+#     let curr: i32 = 0;
+#     let prev1: i32 = 1;
+#     let prev2: i32 = 0;
+#
+#     let i: i32 = 2;
+#     while i <= n {
+#       curr = prev1 + prev2;
+#       prev2 = prev1;
+#       prev1 = curr;
+#
+#       i += 1;
+#     }
+#
+#     out "Fibonnaci Sequence (n = %d) = %d\n" n, curr;
+#   };
+#
+#
+# }
+#
