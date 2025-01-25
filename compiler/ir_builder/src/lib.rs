@@ -3,12 +3,12 @@ use std::{
     fmt::{self, Display},
     iter::Peekable,
     num::ParseIntError,
-    rc::Rc,
+    sync::Arc,
 };
 
 use gxhash::{HashMap, HashSet, HashSetExt};
 
-pub type ImutStr = Rc<str>;
+pub type ImutStr = Arc<str>;
 pub type StructPool = HashMap<String, (Vec<String>, Vec<Argument>)>;
 
 pub static VOID_POINTER_ID: &str = "__void_ptr__";
@@ -349,7 +349,7 @@ impl Type {
             Self::Void => "void".into(),
             Self::Null => "null".into(),
             // TODO: generic structs
-            Self::Struct(td, ..) => Rc::clone(td),
+            Self::Struct(td, ..) => Arc::clone(td),
             Self::Function(inner) => {
                 if let Some(inner) = *inner.to_owned() {
                     format!(
@@ -366,7 +366,7 @@ impl Type {
                     "<unknown function>".into()
                 }
             }
-            Self::Unknown(name) => Rc::clone(name),
+            Self::Unknown(name) => Arc::clone(name),
         }
     }
 
@@ -393,7 +393,7 @@ impl Type {
             Self::Double => "f64".into(),
             Self::Void => "void".into(),
             Self::Null => "null".into(),
-            Self::Struct(td, ..) => Rc::clone(td),
+            Self::Struct(td, ..) => Arc::clone(td),
             Self::Function(_) => self.display(),
             _ => "".into(),
         }
@@ -430,7 +430,7 @@ impl Type {
 
         match self {
             Type::Pointer(inner) => format!("{GENERIC_POINTER}.{}", inner.to_internal_id()).into(),
-            Type::Struct(name) => Rc::clone(name),
+            Type::Struct(name) => Arc::clone(name),
             Type::Unknown(name) => format!("{GENERIC_UNKNOWN}.{name}").into(),
             _ => num.to_string().into(),
         }

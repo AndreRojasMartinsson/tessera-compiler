@@ -3,13 +3,13 @@ use ast::{
     Type,
 };
 use gxhash::HashMap;
-use interner::{Atom, lookup};
-use qbe::Type as IRType;
+use interner::Atom;
+use ir_builder::Type as IRType;
 use symbols::SolvedType;
 
 #[derive(Default, Debug)]
-pub struct TypeSolver<'a> {
-    resolved_identifiers: HashMap<Atom, SolvedType<'a>>,
+pub struct TypeSolver {
+    resolved_identifiers: HashMap<Atom, SolvedType>,
 }
 
 pub fn ty_to_ir_type(ty: Ty, resolved_identifiers: HashMap<Atom, SolvedType>) -> IRType {
@@ -43,7 +43,7 @@ fn solve_type(ty: Ty, resolved_identifiers: HashMap<Atom, SolvedType>) -> Option
     }
 }
 
-impl TypeSolver<'_> {
+impl TypeSolver {
     pub fn solve(&mut self, node: &Program) {
         for item in node.items.clone() {
             match item {
@@ -171,7 +171,7 @@ impl TypeSolver<'_> {
             Expr::PostfixUnary { operand, .. } => {
                 self.solve_expr(false, *operand);
             }
-            Expr::Cast { ty, expr, .. } => {
+            Expr::Cast { expr, .. } => {
                 self.solve_expr(false, *expr);
             }
             Expr::Binary { left, right, .. } => {

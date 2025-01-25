@@ -20,4 +20,3 @@ lexer.workspace = true
 type_solver.workspace = true
 codegen.workspace = true
 symbols.workspace = true 
-qbe = "2.3.0"

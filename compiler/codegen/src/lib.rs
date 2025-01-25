@@ -2,18 +2,16 @@ use gxhash::{HashMap, HashMapExt};
 use interner::{lookup, Atom};
 use lexer::operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp};
 use node::Node;
-use std::{cell::RefCell, cmp::Ordering, fs::File, io::Write, primitive};
+use std::{cell::RefCell, cmp::Ordering};
 
 use ast::{
-    AssignTarget, Block as AstBlock, BlockItem, Expr, ForInit, IfAlternate, LetBinding,
-    LiteralValue, Parameter, Program, ProgramItem, Ty, Type as AstType,
+    AssignTarget, Block as AstBlock, Expr, ForInit, IfAlternate, LetBinding, LiteralValue,
+    Parameter, Program, ProgramItem, Ty, Type as AstType,
 };
 use ir_builder::{
-    Argument, Block, Cmp, Data, DataItem, Function, ImutStr, Instruction, Linkage, Module, Prefix,
-    Primitive, Statement, StructPool, Type, Value, GC_NOOP,
+    Cmp, Data, DataItem, Function, ImutStr, Instruction, Linkage, Module, Prefix, Statement,
+    StructPool, Type, Value, GC_NOOP,
 };
-
-mod builder;
 
 macro_rules! hashmap {
     () => {
@@ -54,10 +52,7 @@ pub struct CodeGen {
     // Struct Name => ((Field Name, Field Type)[])
     struct_pool: StructPool,
     loop_labels: Vec<ImutStr>,
-    buf_metadata: HashMap<String, (Type, Value)>,
     tree: Program,
-    /// lambda functions that should be added asap
-    deferred_functions: Vec<Function>,
     /// Map from temporary ot its stack allocated address
     address_pool: HashMap<String, Value>,
 }
@@ -70,9 +65,7 @@ impl CodeGen {
             data_sections: vec![],
             struct_pool: hashmap![],
             loop_labels: vec![],
-            buf_metadata: hashmap![],
             tree,
-            deferred_functions: vec![],
             address_pool: hashmap![],
         };
 

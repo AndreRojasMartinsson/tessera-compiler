@@ -1,8 +1,8 @@
 use gxhash::HashMap;
-use interner::{Atom, intern};
+use interner::{intern, Atom};
 use uuid::Uuid;
 
-use crate::{GLOBALS, Symbol};
+use crate::{Symbol, GLOBALS};
 
 #[derive(Default, Debug, Clone)]
 pub struct SymbolTable {

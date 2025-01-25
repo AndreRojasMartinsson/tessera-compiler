@@ -8,5 +8,5 @@ edition.workspace = true
 interner.workspace = true
 symbols.workspace = true
 ast.workspace = true
-qbe = "2.3.0"
+ir_builder.workspace = true
 gxhash = "3.4.1"

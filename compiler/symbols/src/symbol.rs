@@ -1,6 +1,6 @@
-use ast::Type;
-use interner::{Atom, intern};
-use qbe::Type as IRType;
+use ast::Type as AstType;
+use interner::{intern, Atom};
+use ir_builder::Type;
 use uuid::Uuid;
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -56,16 +56,16 @@ pub struct ImportSymbol {
 }
 
 #[derive(Clone, Debug)]
-pub enum SolvedType<'a> {
-    Computed(IRType<'a>),
-    Function(IRType<'a>, Vec<IRType<'a>>),
+pub enum SolvedType {
+    Computed(Type),
+    Function(Type, Vec<Type>),
 }
 
 #[derive(Debug, Clone)]
 pub struct VariableSymbol {
     pub id: Atom,
     pub name: Atom,
-    pub ty: Type,
+    pub ty: AstType,
     pub visibility: Visibility,
     pub mutability: Mutability,
     /// Reference count, can be used to determine of symbol is unused
@@ -76,7 +76,7 @@ pub struct VariableSymbol {
 pub struct FunctionSymbol {
     pub id: Atom,
     pub name: Atom,
-    pub return_ty: Type,
+    pub return_ty: AstType,
     /// Vector of atom's SID's used to get variable symbol from global map.
     pub parameters: Vec<Atom>,
     pub visibility: Visibility,
@@ -87,7 +87,7 @@ pub struct FunctionSymbol {
 impl FunctionSymbol {
     pub fn new(
         name: Atom,
-        return_ty: Type,
+        return_ty: AstType,
         parameters: Vec<Atom>,
         visibility: Visibility,
     ) -> (Self, Atom) {
@@ -108,7 +108,7 @@ impl FunctionSymbol {
 impl VariableSymbol {
     pub fn new(
         name: Atom,
-        ty: Type,
+        ty: AstType,
         visibility: Visibility,
         mutability: Mutability,
     ) -> (Self, Atom) {
