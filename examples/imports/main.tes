@@ -1,0 +1,9 @@
+import math;
+
+pub func i32 main() {
+  let result: double = math::addf(5.5, 5.5);
+
+  out "result = %f\n" result;
+
+  0
+}
