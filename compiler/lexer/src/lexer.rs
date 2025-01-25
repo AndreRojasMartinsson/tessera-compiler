@@ -59,6 +59,7 @@ impl<'ctx> Lexer<'ctx> {
                         self.chars.next();
                     }
 
+                    // Consume the trailing newline
                     self.chars.next();
 
                     return Some(KindResult::Ignore);
@@ -236,6 +237,7 @@ impl<'ctx> Lexer<'ctx> {
         }
 
         self.read_decimal_digits_after_first_digit()?;
+
         Ok(())
     }
 

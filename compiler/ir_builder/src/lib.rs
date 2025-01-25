@@ -30,8 +30,8 @@ pub struct Argument {
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Linkage {
     pub exported: bool,
-    pub section: Option<Rc<str>>,
-    pub secflags: Option<Rc<str>>,
+    pub section: Option<ImutStr>,
+    pub secflags: Option<ImutStr>,
 }
 
 impl Linkage {
@@ -74,7 +74,7 @@ impl Display for Linkage {
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Block {
-    pub label: Rc<str>,
+    pub label: ImutStr,
     pub statements: Vec<Statement>,
 }
 
@@ -160,7 +160,7 @@ impl Display for Statement {
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Function {
     pub linkage: Linkage,
-    pub name: Rc<str>,
+    pub name: ImutStr,
     pub parameters: Vec<(Type, Value)>,
     pub return_type: Option<Type>,
     pub blocks: Vec<Block>,
@@ -344,7 +344,7 @@ pub enum Primitive {
 }
 
 impl Type {
-    pub fn display(&self) -> Rc<str> {
+    pub fn display(&self) -> ImutStr {
         match self {
             Self::Byte => "i8".into(),
             Self::UnsignedByte => "u8".into(),
@@ -377,7 +377,7 @@ impl Type {
                             .parameters
                             .iter()
                             .map(|arg| arg.0.clone().display())
-                            .collect::<Vec<Rc<str>>>()
+                            .collect::<Vec<ImutStr>>()
                             .join(", ")
                     )
                     .into()
@@ -390,7 +390,7 @@ impl Type {
         }
     }
 
-    pub fn id(&self) -> Rc<str> {
+    pub fn id(&self) -> ImutStr {
         match self {
             Self::Char => "char".into(),
             Self::Boolean => "bool".into(),
@@ -419,7 +419,7 @@ impl Type {
         }
     }
 
-    pub fn strict_id(&self) -> Rc<str> {
+    pub fn strict_id(&self) -> ImutStr {
         match self {
             x if x.is_string() => "string".into(),
             x if x.is_void_pointer() => VOID_POINTER_ID.into(),
@@ -428,7 +428,7 @@ impl Type {
         }
     }
 
-    pub fn to_internal_id(&self) -> Rc<str> {
+    pub fn to_internal_id(&self) -> ImutStr {
         let num: u8 = match self {
             Type::UnsignedByte => 4,
             Type::UnsignedHalfword => 5,
@@ -456,7 +456,7 @@ impl Type {
         }
     }
 
-    pub fn from_internal_id(id: Rc<str>) -> (Rc<str>, Vec<Type>) {
+    pub fn from_internal_id(id: ImutStr) -> (ImutStr, Vec<Type>) {
         fn is_num_id(id: String) -> Result<u8, ParseIntError> {
             if [
                 GENERIC_IDENTIFIER,
@@ -599,14 +599,14 @@ impl Type {
         }
     }
 
-    pub fn get_struct_inner(&self) -> Option<Rc<str>> {
+    pub fn get_struct_inner(&self) -> Option<ImutStr> {
         match self.clone() {
             Self::Struct(val, ..) => Some(val),
             _ => None,
         }
     }
 
-    pub fn get_unknown_inner(&self) -> Option<Rc<str>> {
+    pub fn get_unknown_inner(&self) -> Option<ImutStr> {
         match self.clone() {
             Self::Unknown(val) => Some(val),
             _ => None,
@@ -806,7 +806,7 @@ impl fmt::Display for Type {
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum DataItem {
-    String(Rc<str>),
+    String(ImutStr),
     Const(f64),
 }
 
@@ -822,7 +822,7 @@ impl Display for DataItem {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data {
     pub linkage: Linkage,
-    pub name: Rc<str>,
+    pub name: ImutStr,
     pub align: Option<u64>,
     pub items: Vec<(Type, DataItem)>,
 }
@@ -830,7 +830,7 @@ pub struct Data {
 impl Data {
     pub fn new(
         linkage: Linkage,
-        name: Rc<str>,
+        name: ImutStr,
         align: Option<u64>,
         items: Vec<(Type, DataItem)>,
     ) -> Self {
@@ -857,7 +857,7 @@ impl Display for Data {
             self.items
                 .iter()
                 .map(|(ty, item)| format!("{ty} {item}").into())
-                .collect::<Vec<Rc<str>>>()
+                .collect::<Vec<ImutStr>>()
                 .join(", ")
         )
     }
@@ -865,7 +865,7 @@ impl Display for Data {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeDef {
-    pub name: Rc<str>,
+    pub name: ImutStr,
     pub align: Option<u64>,
     pub items: Vec<(Type, usize)>,
     pub public: bool,
@@ -937,7 +937,7 @@ impl Display for TypeDef {
                     )
                     .into()
                 })
-                .collect::<Vec<Rc<str>>>()
+                .collect::<Vec<ImutStr>>()
                 .join(", ")
         )
     }
@@ -980,7 +980,7 @@ impl Module {
         while passes > 0 {
             passes -= 1;
 
-            let mut used_functions: HashSet<Rc<str>> = HashSet::new();
+            let mut used_functions: HashSet<ImutStr> = HashSet::new();
 
             for func in self.functions.iter() {
                 for block in func.blocks.iter() {
@@ -1108,7 +1108,7 @@ impl Display for Prefix {
 pub enum Value {
     Temp(ImutStr),
     Global(ImutStr),
-    Const(Prefix, Rc<str>),
+    Const(Prefix, ImutStr),
     Literal(ImutStr),
 }
 
@@ -1393,7 +1393,7 @@ pub enum Instruction {
 
 impl Instruction {
     #[allow(dead_code)]
-    fn is_global_used(&self, global_name: Rc<str>) -> bool {
+    fn is_global_used(&self, global_name: ImutStr) -> bool {
         match self {
             Self::Add(v1, v2)
             | Self::Sub(v1, v2)
@@ -1527,7 +1527,7 @@ impl fmt::Display for Instruction {
                         Type::Null => format!("{}", temp).into(),
                         _ => format!("{} {}", ty.clone().into_abi(), temp).into(),
                     })
-                    .collect::<Vec<Rc<str>>>()
+                    .collect::<Vec<ImutStr>>()
                     .join(", ")
             ),
             Self::Alloc4(val) => write!(f, "alloc4 {}", val),
