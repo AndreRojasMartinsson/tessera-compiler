@@ -173,11 +173,13 @@ mod tests {
 
     #[test]
     fn test_floats() {
-        let input = "45.4349 679.39 3206.4 .542 7e2 7e-8 3.6e-2";
+        let input = "45.4349 679.39 0.5 0.569 3206.4 .542 7e2 7e-8 3.6e-2";
         let mut lexer = Lexer::new(input);
         let expected = vec![
             (Kind::FloatLiteral, Some("45.4349")),
             (Kind::FloatLiteral, Some("679.39")),
+            (Kind::FloatLiteral, Some("0.5")),
+            (Kind::FloatLiteral, Some("0.569")),
             (Kind::FloatLiteral, Some("3206.4")),
             (Kind::FloatLiteral, Some(".542")),
             (Kind::FloatLiteral, Some("7e2")),
