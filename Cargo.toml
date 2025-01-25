@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = [ "compiler/ast", "compiler/codegen", "compiler/context", "compiler/diagnostics","compiler/driver", "compiler/interner", "compiler/ir_builder", "compiler/lexer", "compiler/node", "compiler/parser", "compiler/symbols", "compiler/type_solver"]
+members = [ "compiler/ast", "compiler/codegen", "compiler/context", "compiler/diagnostics","compiler/driver", "compiler/import_resolver", "compiler/interner", "compiler/ir_builder", "compiler/lexer", "compiler/node", "compiler/parser", "compiler/tsc_std", "compiler/symbols", "compiler/type_solver"]
 default-members = ["compiler/driver"]
 
 [workspace.package]
@@ -14,6 +14,8 @@ symbols = {path = "compiler/symbols"}
 diagnostics = {path = "compiler/diagnostics"}
 type_solver = {path = "compiler/type_solver"}
 context = {path = "compiler/context"}
+import_resolver = {path = "compiler/import_resolver"}
+tsc_std = {path = "compiler/tsc_std"}
 ir_builder = {path = "compiler/ir_builder"}
 ast = {path = "compiler/ast"}
 codegen = {path = "compiler/codegen"}

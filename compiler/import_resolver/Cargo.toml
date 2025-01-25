@@ -1,0 +1,12 @@
+[package]
+name = "import_resolver"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+interner.workspace = true
+symbols.workspace = true
+ast.workspace = true
+gxhash = "3.4.1"
+tsc_std.workspace = true

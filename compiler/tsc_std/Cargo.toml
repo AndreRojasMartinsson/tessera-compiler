@@ -1,0 +1,7 @@
+[package]
+name = "tsc_std"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]

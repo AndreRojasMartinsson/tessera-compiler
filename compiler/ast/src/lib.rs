@@ -13,11 +13,11 @@ pub struct Program {
 pub enum ProgramItem {
     Module {
         node: Node,
-        ident: Identifier,
+        tree: MemberExpr,
     },
     Import {
         node: Node,
-        tree: Expr,
+        tree: MemberExpr,
     },
     Function {
         node: Node,

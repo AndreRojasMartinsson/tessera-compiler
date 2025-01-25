@@ -1,4 +1,5 @@
 import math;
+import algorithms::fib;
 
 pub func i32 main() {
   let result: double = math::addf(5.5, 5.5);

@@ -63,8 +63,8 @@ impl<'ctx> Parser<'ctx> {
                 Kind::EnumKw => todo!(),
                 Kind::StructKw => todo!(),
                 Kind::UnionKw => todo!(),
-                Kind::ImportKw => todo!(),
-                Kind::ModuleKw => todo!(),
+                Kind::ImportKw => self.parse_import(),
+                Kind::ModuleKw => self.parse_module(),
                 Kind::DefKw => todo!(),
                 _ => unreachable!(),
             };
@@ -76,6 +76,34 @@ impl<'ctx> Parser<'ctx> {
             sid: self.pop_scope(),
             node: node.finish(self),
             items,
+        }
+    }
+
+    fn parse_module(&mut self) -> ProgramItem {
+        let mut node = self.start_node();
+        self.bump(Kind::ModuleKw);
+
+        let tree = self.parse_member_expr(MemberTy::Namespace);
+
+        self.bump(Kind::Semicolon);
+
+        ProgramItem::Module {
+            node: node.finish(self),
+            tree,
+        }
+    }
+
+    fn parse_import(&mut self) -> ProgramItem {
+        let mut node = self.start_node();
+        self.bump(Kind::ImportKw);
+
+        let tree = self.parse_member_expr(MemberTy::Namespace);
+
+        self.bump(Kind::Semicolon);
+
+        ProgramItem::Import {
+            node: node.finish(self),
+            tree,
         }
     }
 

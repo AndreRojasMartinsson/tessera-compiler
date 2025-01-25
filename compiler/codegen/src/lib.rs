@@ -1593,7 +1593,13 @@ impl CodeGen {
 
     fn convert_assign_target_to_name(&self, target: AssignTarget) -> ImutStr {
         match target {
-            AssignTarget::Member(member) => lookup!(member.segments.last().unwrap().name).into(),
+            AssignTarget::Member(member) => member
+                .segments
+                .iter()
+                .map(|segment| lookup!(segment.name).to_string())
+                .collect::<Vec<String>>()
+                .join("::")
+                .into(),
             AssignTarget::Identifier(ident) => lookup!(ident.name).into(),
         }
     }

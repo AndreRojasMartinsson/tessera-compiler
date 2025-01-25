@@ -430,6 +430,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
+name = "import_resolver"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "gxhash",
+ "interner",
+ "symbols",
+ "tsc_std",
+]
+
+[[package]]
 name = "indenter"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1078,6 +1089,10 @@ dependencies = [
  "thread_local",
  "tracing-core",
 ]
+
+[[package]]
+name = "tsc_std"
+version = "0.1.0"
 
 [[package]]
 name = "type_solver"
