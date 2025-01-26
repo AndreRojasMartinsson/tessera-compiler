@@ -292,6 +292,7 @@ impl<'ctx> Parser<'ctx> {
                 | Kind::ReturnKw
                 | Kind::IntLiteral
                 | Kind::FloatLiteral
+                | Kind::Nil
                 | Kind::StringLiteral
                 | Kind::BoolLiteral
                 | Kind::ForKw
@@ -518,6 +519,7 @@ impl<'ctx> Parser<'ctx> {
             Some(Kind::WhileKw) => self.parse_while_expr(),
             Some(Kind::IntLiteral)
             | Some(Kind::FloatLiteral)
+            | Some(Kind::Nil)
             | Some(Kind::StringLiteral)
             | Some(Kind::BoolLiteral) => self.parse_literal(),
             c => unreachable!("{c:#?}"),

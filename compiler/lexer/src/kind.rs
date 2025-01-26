@@ -91,6 +91,7 @@ pub enum Kind {
     FloatLiteral,
     StringLiteral,
     BoolLiteral,
+    Nil,
 
     // Types
     /// void, u32, i32, double, single, str, bool, u64, i64

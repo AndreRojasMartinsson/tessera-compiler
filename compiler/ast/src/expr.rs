@@ -15,6 +15,7 @@ pub enum LiteralValue {
     Float(f64),
     Integer(i64),
     Boolean(bool),
+    Nil,
 }
 
 impl LiteralValue {
@@ -24,6 +25,7 @@ impl LiteralValue {
             Value::Boolean(boolean) => Self::Boolean(boolean),
             Value::Integer(int) => Self::Integer(int),
             Value::Float(float) => Self::Float(float),
+            Value::Nil => Self::Nil,
         }
     }
 }
@@ -34,6 +36,7 @@ impl Display for LiteralValue {
             Self::Integer(value) => write!(f, "{value}"),
             Self::Boolean(value) => write!(f, "{value}"),
             Self::String(value) => write!(f, "{value}"),
+            Self::Nil => write!(f, "NULL"),
         }
     }
 }

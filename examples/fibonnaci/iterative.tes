@@ -1,5 +1,5 @@
 pub func void main() {
-  let val2: bool = std::string::ends_with("Hello, world!", "d!");
+  let val2: bool = std::string::starts_with("Hello, world!", "Hello");
 
   out "val = %d\n" val2;
 }

@@ -431,6 +431,7 @@ impl<'ctx> Lexer<'ctx> {
             "sizeof" => KindResult::Kind(Kind::SizeofKw),
             "union" => KindResult::Kind(Kind::UnionKw),
             "struct" => KindResult::Kind(Kind::StructKw),
+            "nil" => KindResult::Kind(Kind::Nil),
             "enum" => KindResult::Kind(Kind::EnumKw),
             _ => KindResult::Kind(Kind::Identifier),
         }
@@ -445,6 +446,7 @@ impl<'ctx> Lexer<'ctx> {
         let value: Option<Value> = match kind {
             Kind::Identifier => Some(Value::String(intern!(raw))),
 
+            Kind::Nil => Some(Value::Nil),
             Kind::StringLiteral => Some(Value::String(intern!(raw))),
             Kind::BoolLiteral => Some(Value::Boolean(match raw {
                 "true" => true,

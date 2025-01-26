@@ -97,34 +97,34 @@ impl CodeGen {
     fn inject_libc_functions(module: &RefCell<Module>) {
         // let funcs = [];
         let funcs: &[ExtFunc] = &[
-            ExtFunc::new(&[(Type::Word, "exit_code")], "exit", None),
-            ExtFunc::new(&[(Type::Double, "x")], "log", Some(Type::Double)),
-            ExtFunc::new(&[(Type::Double, "x")], "logf", Some(Type::Double)),
-            ExtFunc::new(&[(Type::Double, "x")], "atan", Some(Type::Double)),
-            ExtFunc::new(&[(Type::Double, "x")], "atanf", Some(Type::Double)),
-            // string comparison
-            ExtFunc::new(
-                &[(Type::Pointer(Box::new(Type::Char)), "s")],
-                "strlen",
-                Some(Type::Long),
-            ),
-            ExtFunc::new(
-                &[
-                    (Type::Pointer(Box::new(Type::Void)), "a1"),
-                    (Type::Pointer(Box::new(Type::Void)), "a2"),
-                    (Type::Long, "n"),
-                ],
-                "memcmp",
-                Some(Type::Long),
-            ),
-            ExtFunc::new(
-                &[
-                    (Type::Pointer(Box::new(Type::Char)), "s1"),
-                    (Type::Pointer(Box::new(Type::Char)), "s2"),
-                ],
-                "strcmp",
-                Some(Type::Long),
-            ),
+            // ExtFunc::new(&[(Type::Word, "exit_code")], "exit", None),
+            // ExtFunc::new(&[(Type::Double, "x")], "log", Some(Type::Double)),
+            // ExtFunc::new(&[(Type::Double, "x")], "logf", Some(Type::Double)),
+            // ExtFunc::new(&[(Type::Double, "x")], "atan", Some(Type::Double)),
+            // ExtFunc::new(&[(Type::Double, "x")], "atanf", Some(Type::Double)),
+            // // string comparison
+            // ExtFunc::new(
+            //     &[(Type::Pointer(Box::new(Type::Char)), "s")],
+            //     "strlen",
+            //     Some(Type::Long),
+            // ),
+            // ExtFunc::new(
+            //     &[
+            //         (Type::Pointer(Box::new(Type::Void)), "a1"),
+            //         (Type::Pointer(Box::new(Type::Void)), "a2"),
+            //         (Type::Long, "n"),
+            //     ],
+            //     "memcmp",
+            //     Some(Type::Long),
+            // ),
+            // ExtFunc::new(
+            //     &[
+            //         (Type::Pointer(Box::new(Type::Char)), "s1"),
+            //         (Type::Pointer(Box::new(Type::Char)), "s2"),
+            //     ],
+            //     "strcmp",
+            //     Some(Type::Long),
+            // ),
         ];
 
         for func_signature in funcs {
@@ -171,26 +171,54 @@ impl CodeGen {
         Self::inject_libc_functions(&module_ref);
 
         generator.tree.items.clone().iter().for_each(|item| {
-            if let ProgramItem::Function {
-                ty,
-                ident,
-                parameters,
-                public,
-                body,
-                ..
-            } = item
-            {
-                let func = generator.generate_function(
-                    ident.name,
-                    *public,
+            match item {
+                ProgramItem::Function {
+                    ty,
+                    ident,
                     parameters,
-                    Some(Self::ast_type_to_type(ty.clone())),
-                    body.clone(),
-                    &module_ref,
-                );
+                    public,
+                    body,
+                    ..
+                } => {
+                    let func = generator.generate_function(
+                        ident.name,
+                        *public,
+                        parameters,
+                        Some(Self::ast_type_to_type(ty.clone())),
+                        body.clone(),
+                        &module_ref,
+                    );
 
-                module_ref.borrow_mut().add_function(func);
-            }
+                    module_ref.borrow_mut().add_function(func);
+                }
+                ProgramItem::ExternalFunction {
+                    ty,
+                    ident,
+                    parameters,
+                    ..
+                } => {
+                    let func = Function {
+                        name: lookup!(ident.name).into(),
+                        return_type: Some(Self::ast_type_to_type(ty.clone())),
+                        parameters: parameters
+                            .to_vec()
+                            .iter()
+                            .map(|param| {
+                                (
+                                    Self::ast_type_to_type(param.ty.clone()),
+                                    Value::Temp(lookup!(param.ident.name).into()),
+                                )
+                            })
+                            .collect::<Vec<(Type, Value)>>(),
+                        linkage: Linkage::public(),
+                        external: true,
+                        blocks: Vec::with_capacity(0),
+                    };
+
+                    module_ref.borrow_mut().add_function(func);
+                }
+                _ => {}
+            };
         });
 
         for data in generator.data_sections {
@@ -1459,6 +1487,20 @@ impl CodeGen {
                         Type::Pointer(Box::new(Type::Char)),
                         Value::Global(name.into()),
                     ))
+                }
+                LiteralValue::Nil => {
+                    self.temp_count += 1;
+                    let name =
+                        self.tmp_name_with_debug_assertions(&func.borrow_mut().name.clone(), true);
+
+                    self.data_sections.push(Data::new(
+                        Linkage::private(),
+                        name.clone().into(),
+                        None,
+                        vec![(Type::Byte, DataItem::Const(0f64))],
+                    ));
+
+                    Some((Type::Long, Value::Global(name.into())))
                 }
                 kind => {
                     let num_ty = match kind {

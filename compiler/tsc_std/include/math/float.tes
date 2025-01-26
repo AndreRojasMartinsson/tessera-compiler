@@ -1,3 +1,7 @@
+extern func double log(double: x);
+extern func double logf(double: x);
+extern func double atan(double: x);
+extern func double atanf(double: x);
 
 
 ###

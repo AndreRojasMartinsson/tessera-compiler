@@ -1,5 +1,14 @@
+extern func i64 strstr(str: haystack, str: needle);
+extern func i64 strcmp(str: s1, str: s2);
+extern func i64 strlen(str: s);
+extern func i64 strncmp(str: haystack, str: needle, i64: num);
+
 pub func i64 std.string.len(str: s) {
   strlen(s)
+}
+
+pub func bool std.string.starts_with(str: haystack, str: needle) {
+  strncmp(needle, haystack, strlen(needle)) == 0
 }
 
 pub func bool std.string.ends_with(str: haystack, str: needle) {
@@ -18,10 +27,6 @@ pub func bool std.string.ends_with(str: haystack, str: needle) {
   false
 }
 
-pub func i64 std.string.contains(str: haystack, str: needle) {
-
-}
-
 pub func i64 std.string.equals(str: string_a, str: string_b) {
   let res: i64 = strcmp(string_a, string_b);
 
@@ -31,3 +36,18 @@ pub func i64 std.string.equals(str: string_a, str: string_b) {
   
   false
 }
+
+pub func i64 std.string.contains(str: haystack, str: needle) {
+  let res: i64 = strstr(haystack, needle);
+
+  if strlen(needle) == 0 && strlen(haystack) > 0 {
+    false
+  };
+
+  if res == 0 {
+    false
+  };
+
+  true
+}
+
