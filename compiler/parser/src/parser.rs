@@ -64,6 +64,7 @@ impl<'ctx> Parser<'ctx> {
                 Kind::StructKw => todo!(),
                 Kind::UnionKw => todo!(),
                 Kind::ImportKw => self.parse_import(),
+                Kind::ExternKw => self.parse_extern(),
                 Kind::ModuleKw => self.parse_module(),
                 Kind::DefKw => todo!(),
                 _ => unreachable!(),
@@ -104,6 +105,49 @@ impl<'ctx> Parser<'ctx> {
         ProgramItem::Import {
             node: node.finish(self),
             tree,
+        }
+    }
+
+    fn parse_extern(&mut self) -> ProgramItem {
+        let mut node = self.start_node();
+        self.bump(Kind::ExternKw);
+        self.bump(Kind::FuncKw);
+
+        let ty = self.parse_type();
+
+        let ident = self.parse_identifier();
+
+        self.bump(Kind::LParen);
+
+        if self.eat(Kind::RParen) {
+            self.bump(Kind::Semicolon);
+
+            return ProgramItem::ExternalFunction {
+                node: node.finish(self),
+                ty,
+                ident,
+                parameters: vec![],
+            };
+        }
+
+        self.push_scope();
+
+        let mut parameters = vec![self.parse_parameter()];
+        while let Some(Kind::Comma) = self.cur_kind() {
+            self.bump(Kind::Comma);
+            parameters.push(self.parse_parameter());
+        }
+
+        self.bump(Kind::RParen);
+        self.pop_scope();
+
+        self.bump(Kind::Semicolon);
+
+        ProgramItem::ExternalFunction {
+            node: node.finish(self),
+            ty,
+            ident,
+            parameters,
         }
     }
 

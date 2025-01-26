@@ -21,6 +21,12 @@ pub enum ProgramItem {
         node: Node,
         tree: MemberExpr,
     },
+    ExternalFunction {
+        node: Node,
+        ty: Type,
+        ident: Identifier,
+        parameters: Vec<Parameter>,
+    },
     Function {
         node: Node,
         ty: Type,
