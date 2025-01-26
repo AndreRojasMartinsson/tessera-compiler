@@ -14,8 +14,8 @@ symbols = {path = "compiler/symbols"}
 diagnostics = {path = "compiler/diagnostics"}
 type_solver = {path = "compiler/type_solver"}
 context = {path = "compiler/context"}
-import_resolver = {path = "compiler/import_resolver"}
 tsc_std = {path = "compiler/tsc_std"}
+import_resolver = {path = "compiler/import_resolver"}
 ir_builder = {path = "compiler/ir_builder"}
 ast = {path = "compiler/ast"}
 codegen = {path = "compiler/codegen"}

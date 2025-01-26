@@ -48,22 +48,53 @@ impl<'ctx> Lexer<'ctx> {
         while let Some(c) = self.peek() {
             match c {
                 '"' => return Some(self.read_string().unwrap()),
-                '#' => {
-                    self.chars.next();
+                '#' => match self.peek_n(1) {
+                    Some('#') => {
+                        if let Some('#') = self.peek_n(2) {
+                            // Doc comment
+                            self.chars.next();
+                            self.chars.next();
+                            self.chars.next();
 
-                    while let Some(ch) = self.peek() {
-                        if ch == '\n' {
-                            break;
+                            let mut hashtag_count = 0;
+
+                            while let Some(ch) = self.peek() {
+                                if ch == '#' {
+                                    hashtag_count += 1;
+                                } else {
+                                    hashtag_count = 0;
+                                }
+
+                                if hashtag_count >= 3 {
+                                    break;
+                                }
+
+                                self.chars.next();
+                            }
+
+                            // Consume the final #
+                            self.chars.next();
+
+                            return Some(KindResult::Ignore);
+                        }
+                    }
+                    Some(_) | None => {
+                        self.chars.next();
+
+                        while let Some(ch) = self.peek() {
+                            if ch == '\n' {
+                                break;
+                            }
+
+                            self.chars.next();
                         }
 
+                        // Consume the trailing newline
                         self.chars.next();
+
+                        return Some(KindResult::Ignore);
                     }
-
-                    // Consume the trailing newline
-                    self.chars.next();
-
-                    return Some(KindResult::Ignore);
-                }
+                },
                 ' ' | '\t' | '\r' | '\n' => {
                     self.chars.next();
 
@@ -135,6 +166,24 @@ impl<'ctx> Lexer<'ctx> {
                     Some('>') => return self.flush(Kind::Arrow, 2),
                     Some('-') => return self.flush(Kind::Decrement, 2),
                     Some('=') => return self.flush(Kind::SubAssign, 2),
+                    Some('.') => {
+                        if let Some('0'..='9') = self.peek_n(2) {
+                            self.chars.next();
+
+                            return Some(self.read_float_after_period().unwrap());
+                        } else {
+                            panic!("Oh no")
+                        }
+                    }
+                    Some('0') => {
+                        self.chars.next();
+                        return Some(self.read_number_starting_with_zero().unwrap());
+                    }
+                    Some('1'..='9') => {
+                        self.chars.next();
+                        return Some(self.read_number_after_first_digit().unwrap());
+                    }
+
                     Some(_) | None => return self.flush_single(Kind::Dash),
                 },
                 '*' => match self.peek_n(1) {
@@ -329,7 +378,7 @@ impl<'ctx> Lexer<'ctx> {
         let start = self.offset();
         self.chars.next(); // Consume starting character;
 
-        while let Some('a'..='z' | 'A'..='Z' | '_' | '0'..='9') = self.peek() {
+        while let Some('a'..='z' | 'A'..='Z' | '_' | '.' | '0'..='9') = self.peek() {
             self.chars.next();
         }
 
@@ -359,7 +408,7 @@ impl<'ctx> Lexer<'ctx> {
         }
 
         match ident {
-            "double" | "single" | "u64" | "i64" | "u32" | "i32" => {
+            "double" | "single" | "u64" | "i64" | "u32" | "i32" | "str" | "void" => {
                 KindResult::Kind(Kind::PrimitiveType)
             }
             "let" => KindResult::Kind(Kind::LetKw),

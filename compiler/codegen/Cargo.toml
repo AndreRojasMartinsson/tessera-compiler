@@ -16,3 +16,5 @@ interner.workspace = true
 node.workspace = true
 symbols.workspace = true 
 gxhash = "3.4.1"
+zstd = "0.13.2"
+leb128 = "0.2.5"

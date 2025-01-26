@@ -1,0 +1,3 @@
+pub func void std.exit(u64: exit_code) {
+  exit(exit_code);
+}

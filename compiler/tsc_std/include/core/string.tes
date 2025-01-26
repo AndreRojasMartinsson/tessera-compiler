@@ -1,0 +1,6 @@
+pub func i32 std.core.string.ends_with(str: string) {
+  out "Hi = %s\n" string;
+  out "Hi Pointer = %p\n" string;
+  
+  50
+}

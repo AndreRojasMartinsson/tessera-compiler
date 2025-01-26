@@ -780,9 +780,9 @@ impl<'ctx> Parser<'ctx> {
 
         let token = self.cur_token().unwrap();
         let ty: Ty = match token.kind {
+            Kind::PrimitiveType => self.parse_primitive_type(),
             Kind::Identifier => self.parse_identifier_type(),
             Kind::LBracket => self.parse_array_type(),
-            Kind::PrimitiveType => self.parse_primitive_type(),
             c => unreachable!("{c:?}"),
         };
 

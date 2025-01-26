@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 pub use expr::*;
 use interner::Atom;
 use node::Node;
@@ -48,6 +50,24 @@ pub enum Ty {
     Void,
     Array(Box<Type>, Box<Expr>),
     Identifier(Atom),
+}
+
+impl Display for Ty {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Identifier(atom) => write!(f, "{atom}"),
+            Self::Array(ty, expr) => write!(f, "{}{expr}", ty.ty),
+            Self::U32 => write!(f, "u32"),
+            Self::U64 => write!(f, "u64"),
+            Self::I32 => write!(f, "i32"),
+            Self::I64 => write!(f, "i64"),
+            Self::Str => write!(f, "str"),
+            Self::Bool => write!(f, "bool"),
+            Self::Void => write!(f, "void"),
+            Self::Double => write!(f, "double"),
+            Self::Single => write!(f, "single"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

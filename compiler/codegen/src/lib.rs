@@ -2,14 +2,21 @@ use gxhash::{HashMap, HashMapExt};
 use interner::{lookup, Atom};
 use lexer::operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp};
 use node::Node;
-use std::{cell::RefCell, cmp::Ordering};
+use std::{
+    cell::RefCell,
+    cmp::Ordering,
+    fs::{self, File},
+    io::{BufWriter, Write},
+    path::PathBuf,
+    sync::Arc,
+};
 
 use ast::{
     AssignTarget, Block as AstBlock, Expr, ForInit, IfAlternate, LetBinding, LiteralValue,
     Parameter, Program, ProgramItem, Ty, Type as AstType,
 };
 use ir_builder::{
-    Cmp, Data, DataItem, Function, ImutStr, Instruction, Linkage, Module, Prefix, Statement,
+    Block, Cmp, Data, DataItem, Function, ImutStr, Instruction, Linkage, Module, Prefix, Statement,
     StructPool, Type, Value, GC_NOOP,
 };
 
@@ -64,7 +71,53 @@ pub struct CodeGen {
     address_pool: HashMap<String, Value>,
 }
 
+struct ExtFunc {
+    params: Vec<(Type, Value)>,
+    name: String,
+    return_ty: Option<Type>,
+}
+
+impl ExtFunc {
+    pub fn new(params: &[(Type, &str)], name: &str, return_ty: Option<Type>) -> Self {
+        Self {
+            params: params
+                .to_vec()
+                .iter()
+                .map(|(param_ty, param_name)| {
+                    (param_ty.clone(), Value::Temp(param_name.to_string().into()))
+                })
+                .collect::<Vec<(Type, Value)>>(),
+            name: name.to_string(),
+            return_ty,
+        }
+    }
+}
+
 impl CodeGen {
+    fn inject_libc_functions(module: &RefCell<Module>) {
+        // let funcs = [];
+        let funcs: &[ExtFunc] = &[
+            ExtFunc::new(&[(Type::Word, "exit_code")], "exit", None),
+            ExtFunc::new(&[(Type::Double, "x")], "log", Some(Type::Double)),
+            ExtFunc::new(&[(Type::Double, "x")], "logf", Some(Type::Double)),
+            ExtFunc::new(&[(Type::Double, "x")], "atan", Some(Type::Double)),
+            ExtFunc::new(&[(Type::Double, "x")], "atanf", Some(Type::Double)),
+        ];
+
+        for func_signature in funcs {
+            let func = Function {
+                name: func_signature.name.clone().into(),
+                external: true,
+                return_type: func_signature.return_ty.clone(),
+                blocks: Vec::with_capacity(0),
+                linkage: Linkage::public(),
+                parameters: func_signature.params.clone(),
+            };
+
+            module.borrow_mut().add_function(func);
+        }
+    }
+
     pub fn compile(tree: Program, object_output: bool, print_ir: bool) -> Result<String, String> {
         let mut generator = Self {
             temp_count: 0,
@@ -92,6 +145,8 @@ impl CodeGen {
             )
         }
 
+        Self::inject_libc_functions(&module_ref);
+
         generator.tree.items.clone().iter().for_each(|item| {
             if let ProgramItem::Function {
                 ty,
@@ -118,13 +173,18 @@ impl CodeGen {
         for data in generator.data_sections {
             module_ref.borrow_mut().add_data(data);
         }
+        //
+        // module_ref
+        //     .borrow_mut()
+        //     .remove_unused_functions(object_output, None);
+        //
+        module_ref.borrow_mut().remove_unused_data();
+        module_ref.borrow_mut().remove_empty_structs();
 
         module_ref
             .borrow_mut()
-            .remove_unused_functions(object_output, None);
-
-        module_ref.borrow_mut().remove_unused_data();
-        module_ref.borrow_mut().remove_empty_structs();
+            .functions
+            .retain(|func| !func.external);
 
         if print_ir {
             println!("{}", module_ref.borrow());
@@ -276,7 +336,7 @@ impl CodeGen {
             Ty::Bool => Type::Boolean,
             Ty::Str => Type::Pointer(Box::new(Type::Char)),
             Ty::Void => Type::Void,
-            _ => unreachable!(),
+            c => unreachable!("{c:?}"),
         }
     }
 
@@ -313,6 +373,7 @@ impl CodeGen {
                 Linkage::private()
             },
             name: lookup!(ident).into(),
+            external: false,
             parameters: params,
             return_type: return_ty,
             blocks: vec![],
@@ -1175,6 +1236,42 @@ impl CodeGen {
             Expr::PrefixUnary {
                 operator, operand, ..
             } => {
+                if operator == PrefixOp::Neg {
+                    if let Some((operand_ty, operand_val)) =
+                        self.generate_expr(func, module, *operand, ty, None, false)
+                    {
+                        let temp = self.new_temporary(Some("unary"), false);
+
+                        func.borrow_mut().assign_instruction(
+                            &temp,
+                            &operand_ty,
+                            Instruction::Mul(
+                                operand_val,
+                                Value::Const(
+                                    if operand_ty.clone() == Type::Double {
+                                        Prefix::Double
+                                    } else if operand_ty.clone() == Type::Single {
+                                        Prefix::Single
+                                    } else {
+                                        Prefix::None
+                                    },
+                                    "-1".into(),
+                                ),
+                            ),
+                        );
+
+                        if is_return {
+                            func.borrow_mut()
+                                .add_instruction(Instruction::Ret(Some((operand_ty, temp))));
+
+                            return None;
+                        } else {
+                            return Some((operand_ty, temp));
+                        }
+                    };
+
+                    panic!("AHo")
+                }
                 let (operand_ty, operand_val) = self
                     .generate_expr(func, module, *operand, ty, None, is_return)
                     .expect("Unexpected error when trying to parse operand of an unary operation");
@@ -1415,16 +1512,16 @@ impl CodeGen {
             } => {
                 let ctx = Context { module, func };
 
-                if matches!(operator, BinaryOp::And | BinaryOp::Or) {
-                    return Some(self.handle_short_circuiting_operation(
-                        *left,
-                        *right,
-                        &ctx,
-                        ty.clone(),
-                        is_return,
-                        operator,
-                    ));
-                }
+                // if matches!(operator, BinaryOp::And | BinaryOp::Or) {
+                //     return Some(self.handle_short_circuiting_operation(
+                //         *left,
+                //         *right,
+                //         &ctx,
+                //         ty.clone(),
+                //         is_return,
+                //         operator,
+                //     ));
+                // }
 
                 let (mut left_ty, left_val_unparsed) = self.generate_expr(func, module, *left.clone(), ty, None, false).expect("Unexpected error when trying to parse left side of an arithmetic operation");
                 let (mut right_ty, right_val_unparsed) = self.generate_expr(func, module, *right.clone(), ty, None, false).expect("Unexpected error when trying to parse right side of an arithmetic operation");
@@ -1598,7 +1695,7 @@ impl CodeGen {
                 .iter()
                 .map(|segment| lookup!(segment.name).to_string())
                 .collect::<Vec<String>>()
-                .join("::")
+                .join(".")
                 .into(),
             AssignTarget::Identifier(ident) => lookup!(ident.name).into(),
         }

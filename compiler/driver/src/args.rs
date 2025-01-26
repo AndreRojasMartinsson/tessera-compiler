@@ -29,6 +29,10 @@ pub enum Command {
         /// Whether or not to emit ASM
         #[arg(long = "emit-asm", default_value_t = false)]
         emit_asm: bool,
+
+        /// Whether or not to emit IR
+        #[arg(long = "emit-ir", default_value_t = false)]
+        emit_ir: bool,
     },
     Build {
         /// Path to the file TESC should compile
@@ -45,6 +49,10 @@ pub enum Command {
         /// Whether or not to emit ASM
         #[arg(long = "emit-asm", default_value_t = false)]
         emit_asm: bool,
+
+        /// Whether or not to emit IR
+        #[arg(long = "emit-ir", default_value_t = false)]
+        emit_ir: bool,
     },
 }
 

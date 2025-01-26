@@ -1,48 +1,55 @@
-func i64 fib_iter(i64: n) {
-  if n <= 1 {
-    n
-  } else {
-    let curr: i64 = 0;
-    let prev1: i64 = 1;
-    let prev2: i64 = 0;
+pub func void main() {
+  let val2: double = std::math::round(3.49);
 
-    for let i: i64 = 2, i <= n, i++ {
-      curr = prev1 + prev2;
-      prev2 = prev1;
-      prev1 = curr;
-    };
-
-    curr
-  }
+  out "val = %.20f\n" val2;
 }
 
-pub func i32 main() {
-  let fib_5: i64 = fib_iter(5);
-  let fib_20: i64 = fib_iter(20);
-  let fib_45: i64 = fib_iter(45);
-  let fib_65: i64 = fib_iter(65);
 
-  if fib_5 != 5 {
-    out "ASSERTION: Left != Right.\nLeft: %d\nRight: %d\n" fib_5, 5;
-    1
-  };
-
-  if fib_20 != 6765 {
-    out "ASSERTION: Left != Right.\nLeft: %d\nRight: %d\n" fib_20, 6765;
-    1
-  };
-
-  if fib_45 != 1134903170 {
-    out "ASSERTION: Left != Right.\nLeft: %d\nRight: %d\n" fib_45, 1134903170;
-    1
-  };
-
-  if fib_65 != 17167680177565 {
-    out "ASSERTION: Left != Right.\nLeft: %d\nRight: %d\n" fib_65, 17167680177565;
-    1
-  };
-
-  out "Ran successfully!";
-
-  0
-}
+# func i64 fib_iter(i64: n) {
+#   if n <= 1 {
+#     n
+#   } else {
+#     let curr: i64 = 0;
+#     let prev1: i64 = 1;
+#     let prev2: i64 = 0;
+#
+#     for let i: i64 = 2, i <= n, i++ {
+#       curr = prev1 + prev2;
+#       prev2 = prev1;
+#       prev1 = curr;
+#     };
+#
+#     curr
+#   }
+# }
+#
+# pub func i32 main() {
+#   let fib_5: i64 = fib_iter(5);
+#   let fib_20: i64 = fib_iter(20);
+#   let fib_45: i64 = fib_iter(45);
+#   let fib_65: i64 = fib_iter(65);
+#
+#   if fib_5 != 5 {
+#     out "ASSERTION: Left != Right.\nLeft: %d\nRight: %d\n" fib_5, 5;
+#     1
+#   };
+#
+#   if fib_20 != 6765 {
+#     out "ASSERTION: Left != Right.\nLeft: %d\nRight: %d\n" fib_20, 6765;
+#     1
+#   };
+#
+#   if fib_45 != 1134903170 {
+#     out "ASSERTION: Left != Right.\nLeft: %d\nRight: %d\n" fib_45, 1134903170;
+#     1
+#   };
+#
+#   if fib_65 != 17167680177565 {
+#     out "ASSERTION: Left != Right.\nLeft: %d\nRight: %d\n" fib_65, 17167680177565;
+#     1
+#   };
+#
+#   out "Ran successfully!";
+#
+#   0
+# }

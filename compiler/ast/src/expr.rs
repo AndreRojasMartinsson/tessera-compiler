@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use interner::Atom;
 use lexer::{
     operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp},
@@ -22,6 +24,16 @@ impl LiteralValue {
             Value::Boolean(boolean) => Self::Boolean(boolean),
             Value::Integer(int) => Self::Integer(int),
             Value::Float(float) => Self::Float(float),
+        }
+    }
+}
+impl Display for LiteralValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Float(value) => write!(f, "{value}"),
+            Self::Integer(value) => write!(f, "{value}"),
+            Self::Boolean(value) => write!(f, "{value}"),
+            Self::String(value) => write!(f, "{value}"),
         }
     }
 }
@@ -112,6 +124,18 @@ pub enum Expr {
     Member(MemberExpr),
     Identifier(Identifier),
     If(IfExpr),
+}
+
+impl Display for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Identifier(atom) => write!(f, "{}", atom.name),
+            Self::Paren { expr, .. } => write!(f, "{expr}"),
+            Self::Cast { ty, expr, .. } => write!(f, "{expr}"),
+            Self::Literal { value, .. } => write!(f, "{value}"),
+            _ => Ok(()),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
