@@ -3,22 +3,14 @@ use import_resolver::ImportResolver;
 use interner::{intern, lookup, Atom};
 use lexer::operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp};
 use node::Node;
-use std::{
-    cell::RefCell,
-    cmp::Ordering,
-    fs::{self, File},
-    io::{BufWriter, Write},
-    path::PathBuf,
-    sync::Arc,
-};
-use symbols::ImportSymbol;
+use std::{cell::RefCell, cmp::Ordering};
 
 use ast::{
     AssignTarget, Block as AstBlock, Expr, ForInit, IfAlternate, LetBinding, LiteralValue,
     Parameter, Program, ProgramItem, Ty, Type as AstType,
 };
 use ir_builder::{
-    Block, Cmp, Data, DataItem, Function, ImutStr, Instruction, Linkage, Module, Prefix, Statement,
+    Cmp, Data, DataItem, Function, ImutStr, Instruction, Linkage, Module, Prefix, Statement,
     StructPool, Type, Value, GC_NOOP,
 };
 
@@ -73,76 +65,7 @@ pub struct CodeGen {
     address_pool: HashMap<String, Value>,
 }
 
-struct ExtFunc {
-    params: Vec<(Type, Value)>,
-    name: String,
-    return_ty: Option<Type>,
-}
-
-impl ExtFunc {
-    pub fn new(params: &[(Type, &str)], name: &str, return_ty: Option<Type>) -> Self {
-        Self {
-            params: params
-                .to_vec()
-                .iter()
-                .map(|(param_ty, param_name)| {
-                    (param_ty.clone(), Value::Temp(param_name.to_string().into()))
-                })
-                .collect::<Vec<(Type, Value)>>(),
-            name: name.to_string(),
-            return_ty,
-        }
-    }
-}
-
 impl CodeGen {
-    fn inject_libc_functions(module: &RefCell<Module>) {
-        // let funcs = [];
-        let funcs: &[ExtFunc] = &[
-            // ExtFunc::new(&[(Type::Word, "exit_code")], "exit", None),
-            // ExtFunc::new(&[(Type::Double, "x")], "log", Some(Type::Double)),
-            // ExtFunc::new(&[(Type::Double, "x")], "logf", Some(Type::Double)),
-            // ExtFunc::new(&[(Type::Double, "x")], "atan", Some(Type::Double)),
-            // ExtFunc::new(&[(Type::Double, "x")], "atanf", Some(Type::Double)),
-            // // string comparison
-            // ExtFunc::new(
-            //     &[(Type::Pointer(Box::new(Type::Char)), "s")],
-            //     "strlen",
-            //     Some(Type::Long),
-            // ),
-            // ExtFunc::new(
-            //     &[
-            //         (Type::Pointer(Box::new(Type::Void)), "a1"),
-            //         (Type::Pointer(Box::new(Type::Void)), "a2"),
-            //         (Type::Long, "n"),
-            //     ],
-            //     "memcmp",
-            //     Some(Type::Long),
-            // ),
-            // ExtFunc::new(
-            //     &[
-            //         (Type::Pointer(Box::new(Type::Char)), "s1"),
-            //         (Type::Pointer(Box::new(Type::Char)), "s2"),
-            //     ],
-            //     "strcmp",
-            //     Some(Type::Long),
-            // ),
-        ];
-
-        for func_signature in funcs {
-            let func = Function {
-                name: func_signature.name.clone().into(),
-                external: true,
-                return_type: func_signature.return_ty.clone(),
-                blocks: Vec::with_capacity(0),
-                linkage: Linkage::public(),
-                parameters: func_signature.params.clone(),
-            };
-
-            module.borrow_mut().add_function(func);
-        }
-    }
-
     pub fn compile(
         tree: Program,
         object_output: bool,
@@ -174,8 +97,6 @@ impl CodeGen {
                 "-".repeat(40)
             )
         }
-
-        Self::inject_libc_functions(&module_ref);
 
         generator.tree.items.clone().iter().for_each(|item| {
             match item {
@@ -257,11 +178,11 @@ impl CodeGen {
         for data in generator.data_sections {
             module_ref.borrow_mut().add_data(data);
         }
-        //
-        // module_ref
-        //     .borrow_mut()
-        //     .remove_unused_functions(object_output, None);
-        //
+
+        module_ref
+            .borrow_mut()
+            .remove_unused_functions(object_output, None);
+
         module_ref.borrow_mut().remove_unused_data();
         module_ref.borrow_mut().remove_empty_structs();
 
