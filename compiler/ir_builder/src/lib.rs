@@ -163,6 +163,7 @@ pub struct Function {
     pub name: ImutStr,
     pub parameters: Vec<(Type, Value)>,
     pub return_type: Option<Type>,
+    pub external: bool,
     pub blocks: Vec<Block>,
 }
 

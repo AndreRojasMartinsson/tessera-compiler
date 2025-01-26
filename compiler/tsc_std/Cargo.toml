@@ -1,0 +1,14 @@
+[package]
+name = "tsc_std"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+parser.workspace = true 
+lexer.workspace = true 
+ast.workspace = true 
+interner.workspace = true 
+
+[build-dependencies]
+codegen.workspace = true

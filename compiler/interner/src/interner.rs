@@ -1,5 +1,5 @@
 use std::{
-    fmt::Debug,
+    fmt::{Debug, Display},
     sync::{LazyLock, Mutex},
 };
 
@@ -7,6 +7,15 @@ use gxhash::HashMap;
 
 #[derive(Clone, PartialEq, Eq, Copy, Hash, Default)]
 pub struct Atom(pub(super) u32);
+
+impl Display for Atom {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let interner = INTERNER
+            .lock()
+            .expect("Should have valid global interner instance");
+        write!(f, "{}", interner.lookup(self))
+    }
+}
 
 impl Debug for Atom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -84,12 +84,14 @@ pub enum Kind {
     UnionKw,
     StructKw,
     EnumKw,
+    ExternKw,
 
     // Literals
     IntLiteral,
     FloatLiteral,
     StringLiteral,
     BoolLiteral,
+    Nil,
 
     // Types
     /// void, u32, i32, double, single, str, bool, u64, i64

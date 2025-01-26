@@ -108,17 +108,17 @@ impl Display for BinaryOp {
             Self::Mul => write!(f, "*"),
             Self::Div => write!(f, "/"),
             Self::Rem => write!(f, "%"),
-            Self::And => write!(f, "&"),
-            Self::Or => write!(f, "|"),
-            Self::Xor => write!(f, "^"),
+            Self::And => write!(f, "band"),
+            Self::Or => write!(f, "bor"),
+            Self::Xor => write!(f, "bxor"),
             Self::Lt => write!(f, "<"),
             Self::Gt => write!(f, ">"),
             Self::Gte => write!(f, ">="),
             Self::Lte => write!(f, "<="),
             Self::Shl => write!(f, "<<"),
             Self::Shr => write!(f, ">>"),
-            Self::LogAnd => write!(f, "&&"),
-            Self::LogOr => write!(f, "||"),
+            Self::LogAnd => write!(f, "and"),
+            Self::LogOr => write!(f, "or"),
         }
     }
 }

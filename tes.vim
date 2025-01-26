@@ -3,7 +3,7 @@
 " Usage Instructions
 " Put this file in .vim/syntax/tes.vim
 " and add in your .vimrc file the next line:
-" autocmd BufRead,BufNewFile *.tes set filetype=tes
+" autocmd BufRead,BufNewFile *.tn set filetype=tes
 if exists("b:current_syntax")
   finish
 endif
@@ -14,7 +14,7 @@ setlocal commentstring=#\ %s
 " Keywords
 "syn keyword tesKW pub func import module out let const if for else while loop
 
-syn keyword tesKw break continue pub return for while if else
+syn keyword tesKw break continue pub return for while if else extern
 syn keyword tesKw import nextgroup=tesModPath skipwhile skipempty
 syn keyword tesKw module nextgroup=tesModPath skipwhile skipempty
 syn keyword tesKw func nextgroup=tesFunctionName skipwhile skipempty
@@ -123,3 +123,4 @@ hi def link tesIdentifier Identifier
 
 
 let b:current_syntax = "tes"
+

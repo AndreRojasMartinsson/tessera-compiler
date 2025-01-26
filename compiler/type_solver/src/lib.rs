@@ -49,6 +49,7 @@ impl TypeSolver {
             match item {
                 ProgramItem::Module { .. } => {}
                 ProgramItem::Import { .. } => {}
+                ProgramItem::ExternalFunction { .. } => {}
                 ProgramItem::Function {
                     ty,
                     ident,

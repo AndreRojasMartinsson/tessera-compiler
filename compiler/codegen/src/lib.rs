@@ -1,15 +1,24 @@
 use gxhash::{HashMap, HashMapExt};
-use interner::{lookup, Atom};
+use import_resolver::ImportResolver;
+use interner::{intern, lookup, Atom};
 use lexer::operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp};
 use node::Node;
-use std::{cell::RefCell, cmp::Ordering};
+use std::{
+    cell::RefCell,
+    cmp::Ordering,
+    fs::{self, File},
+    io::{BufWriter, Write},
+    path::PathBuf,
+    sync::Arc,
+};
+use symbols::ImportSymbol;
 
 use ast::{
     AssignTarget, Block as AstBlock, Expr, ForInit, IfAlternate, LetBinding, LiteralValue,
     Parameter, Program, ProgramItem, Ty, Type as AstType,
 };
 use ir_builder::{
-    Cmp, Data, DataItem, Function, ImutStr, Instruction, Linkage, Module, Prefix, Statement,
+    Block, Cmp, Data, DataItem, Function, ImutStr, Instruction, Linkage, Module, Prefix, Statement,
     StructPool, Type, Value, GC_NOOP,
 };
 
@@ -64,8 +73,82 @@ pub struct CodeGen {
     address_pool: HashMap<String, Value>,
 }
 
+struct ExtFunc {
+    params: Vec<(Type, Value)>,
+    name: String,
+    return_ty: Option<Type>,
+}
+
+impl ExtFunc {
+    pub fn new(params: &[(Type, &str)], name: &str, return_ty: Option<Type>) -> Self {
+        Self {
+            params: params
+                .to_vec()
+                .iter()
+                .map(|(param_ty, param_name)| {
+                    (param_ty.clone(), Value::Temp(param_name.to_string().into()))
+                })
+                .collect::<Vec<(Type, Value)>>(),
+            name: name.to_string(),
+            return_ty,
+        }
+    }
+}
+
 impl CodeGen {
-    pub fn compile(tree: Program, object_output: bool, print_ir: bool) -> Result<String, String> {
+    fn inject_libc_functions(module: &RefCell<Module>) {
+        // let funcs = [];
+        let funcs: &[ExtFunc] = &[
+            // ExtFunc::new(&[(Type::Word, "exit_code")], "exit", None),
+            // ExtFunc::new(&[(Type::Double, "x")], "log", Some(Type::Double)),
+            // ExtFunc::new(&[(Type::Double, "x")], "logf", Some(Type::Double)),
+            // ExtFunc::new(&[(Type::Double, "x")], "atan", Some(Type::Double)),
+            // ExtFunc::new(&[(Type::Double, "x")], "atanf", Some(Type::Double)),
+            // // string comparison
+            // ExtFunc::new(
+            //     &[(Type::Pointer(Box::new(Type::Char)), "s")],
+            //     "strlen",
+            //     Some(Type::Long),
+            // ),
+            // ExtFunc::new(
+            //     &[
+            //         (Type::Pointer(Box::new(Type::Void)), "a1"),
+            //         (Type::Pointer(Box::new(Type::Void)), "a2"),
+            //         (Type::Long, "n"),
+            //     ],
+            //     "memcmp",
+            //     Some(Type::Long),
+            // ),
+            // ExtFunc::new(
+            //     &[
+            //         (Type::Pointer(Box::new(Type::Char)), "s1"),
+            //         (Type::Pointer(Box::new(Type::Char)), "s2"),
+            //     ],
+            //     "strcmp",
+            //     Some(Type::Long),
+            // ),
+        ];
+
+        for func_signature in funcs {
+            let func = Function {
+                name: func_signature.name.clone().into(),
+                external: true,
+                return_type: func_signature.return_ty.clone(),
+                blocks: Vec::with_capacity(0),
+                linkage: Linkage::public(),
+                parameters: func_signature.params.clone(),
+            };
+
+            module.borrow_mut().add_function(func);
+        }
+    }
+
+    pub fn compile(
+        tree: Program,
+        object_output: bool,
+        print_ir: bool,
+        import_resolver: &RefCell<ImportResolver>,
+    ) -> Result<String, String> {
         let mut generator = Self {
             temp_count: 0,
             scopes: vec![],
@@ -92,39 +175,100 @@ impl CodeGen {
             )
         }
 
-        generator.tree.items.clone().iter().for_each(|item| {
-            if let ProgramItem::Function {
-                ty,
-                ident,
-                parameters,
-                public,
-                body,
-                ..
-            } = item
-            {
-                let func = generator.generate_function(
-                    ident.name,
-                    *public,
-                    parameters,
-                    Some(Self::ast_type_to_type(ty.clone())),
-                    body.clone(),
-                    &module_ref,
-                );
+        Self::inject_libc_functions(&module_ref);
 
-                module_ref.borrow_mut().add_function(func);
-            }
+        generator.tree.items.clone().iter().for_each(|item| {
+            match item {
+                ProgramItem::Import { tree, .. } => {
+                    // Resolve import
+                    let resolved_namespace =
+                        generator.convert_assign_target_to_name(AssignTarget::Member(tree.clone()));
+
+                    if let Some(import_path) = import_resolver
+                        .borrow()
+                        .index
+                        .get(&resolved_namespace.to_string())
+                    {
+                        if let Some(funcs) = import_resolver.borrow().functions.get(import_path) {
+                            for imported_func in funcs {
+                                let func = generator.generate_function(
+                                    intern!(&imported_func.name),
+                                    true,
+                                    &imported_func.parameters,
+                                    Some(Self::ast_type_to_type(imported_func.return_ty.clone())),
+                                    imported_func.body.clone(),
+                                    &module_ref,
+                                );
+
+                                module_ref.borrow_mut().add_function(func);
+                            }
+                        }
+                    }
+                }
+                ProgramItem::Function {
+                    ty,
+                    ident,
+                    parameters,
+                    public,
+                    body,
+                    ..
+                } => {
+                    let func = generator.generate_function(
+                        ident.name,
+                        *public,
+                        parameters,
+                        Some(Self::ast_type_to_type(ty.clone())),
+                        body.clone(),
+                        &module_ref,
+                    );
+
+                    module_ref.borrow_mut().add_function(func);
+                }
+                ProgramItem::ExternalFunction {
+                    ty,
+                    ident,
+                    parameters,
+                    ..
+                } => {
+                    let func = Function {
+                        name: lookup!(ident.name).into(),
+                        return_type: Some(Self::ast_type_to_type(ty.clone())),
+                        parameters: parameters
+                            .to_vec()
+                            .iter()
+                            .map(|param| {
+                                (
+                                    Self::ast_type_to_type(param.ty.clone()),
+                                    Value::Temp(lookup!(param.ident.name).into()),
+                                )
+                            })
+                            .collect::<Vec<(Type, Value)>>(),
+                        linkage: Linkage::public(),
+                        external: true,
+                        blocks: Vec::with_capacity(0),
+                    };
+
+                    module_ref.borrow_mut().add_function(func);
+                }
+                _ => {}
+            };
         });
 
         for data in generator.data_sections {
             module_ref.borrow_mut().add_data(data);
         }
+        //
+        // module_ref
+        //     .borrow_mut()
+        //     .remove_unused_functions(object_output, None);
+        //
+        module_ref.borrow_mut().remove_unused_data();
+        module_ref.borrow_mut().remove_empty_structs();
 
         module_ref
             .borrow_mut()
-            .remove_unused_functions(object_output, None);
-
-        module_ref.borrow_mut().remove_unused_data();
-        module_ref.borrow_mut().remove_empty_structs();
+            .functions
+            .retain(|func| !func.external);
 
         if print_ir {
             println!("{}", module_ref.borrow());
@@ -276,7 +420,7 @@ impl CodeGen {
             Ty::Bool => Type::Boolean,
             Ty::Str => Type::Pointer(Box::new(Type::Char)),
             Ty::Void => Type::Void,
-            _ => unreachable!(),
+            c => unreachable!("{c:?}"),
         }
     }
 
@@ -313,6 +457,7 @@ impl CodeGen {
                 Linkage::private()
             },
             name: lookup!(ident).into(),
+            external: false,
             parameters: params,
             return_type: return_ty,
             blocks: vec![],
@@ -1175,8 +1320,44 @@ impl CodeGen {
             Expr::PrefixUnary {
                 operator, operand, ..
             } => {
+                if operator == PrefixOp::Neg {
+                    if let Some((operand_ty, operand_val)) =
+                        self.generate_expr(func, module, *operand, ty, None, false)
+                    {
+                        let temp = self.new_temporary(Some("unary"), false);
+
+                        func.borrow_mut().assign_instruction(
+                            &temp,
+                            &operand_ty,
+                            Instruction::Mul(
+                                operand_val,
+                                Value::Const(
+                                    if operand_ty.clone() == Type::Double {
+                                        Prefix::Double
+                                    } else if operand_ty.clone() == Type::Single {
+                                        Prefix::Single
+                                    } else {
+                                        Prefix::None
+                                    },
+                                    "-1".into(),
+                                ),
+                            ),
+                        );
+
+                        if is_return {
+                            func.borrow_mut()
+                                .add_instruction(Instruction::Ret(Some((operand_ty, temp))));
+
+                            return None;
+                        } else {
+                            return Some((operand_ty, temp));
+                        }
+                    };
+
+                    panic!("AHo")
+                }
                 let (operand_ty, operand_val) = self
-                    .generate_expr(func, module, *operand, ty, None, is_return)
+                    .generate_expr(func, module, *operand, ty, None, false)
                     .expect("Unexpected error when trying to parse operand of an unary operation");
 
                 let temp = self.new_temporary(Some("unary"), true);
@@ -1340,6 +1521,20 @@ impl CodeGen {
                         Value::Global(name.into()),
                     ))
                 }
+                LiteralValue::Nil => {
+                    self.temp_count += 1;
+                    let name =
+                        self.tmp_name_with_debug_assertions(&func.borrow_mut().name.clone(), true);
+
+                    self.data_sections.push(Data::new(
+                        Linkage::private(),
+                        name.clone().into(),
+                        None,
+                        vec![(Type::Byte, DataItem::Const(0f64))],
+                    ));
+
+                    Some((Type::Long, Value::Global(name.into())))
+                }
                 kind => {
                     let num_ty = match kind {
                         LiteralValue::Float(_) => Type::Double,
@@ -1415,7 +1610,7 @@ impl CodeGen {
             } => {
                 let ctx = Context { module, func };
 
-                if matches!(operator, BinaryOp::And | BinaryOp::Or) {
+                if matches!(operator, BinaryOp::LogAnd | BinaryOp::LogOr) {
                     return Some(self.handle_short_circuiting_operation(
                         *left,
                         *right,
@@ -1538,6 +1733,8 @@ impl CodeGen {
                     BinaryOp::Gte,
                     BinaryOp::Equal,
                     BinaryOp::NotEqual,
+                    BinaryOp::LogAnd,
+                    BinaryOp::LogOr,
                 ]
                 .contains(&operator)
                 {
@@ -1593,7 +1790,13 @@ impl CodeGen {
 
     fn convert_assign_target_to_name(&self, target: AssignTarget) -> ImutStr {
         match target {
-            AssignTarget::Member(member) => lookup!(member.segments.last().unwrap().name).into(),
+            AssignTarget::Member(member) => member
+                .segments
+                .iter()
+                .map(|segment| lookup!(segment.name).to_string())
+                .collect::<Vec<String>>()
+                .join(".")
+                .into(),
             AssignTarget::Identifier(ident) => lookup!(ident.name).into(),
         }
     }
@@ -1752,14 +1955,14 @@ impl CodeGen {
         );
 
         match operator {
-            BinaryOp::And => {
+            BinaryOp::LogAnd => {
                 func.borrow_mut().add_instruction(Instruction::Jnz(
                     left_tmp,
                     end_label.clone().into(),
                     right_label.clone().into(),
                 ));
             }
-            BinaryOp::Or => {
+            BinaryOp::LogOr => {
                 func.borrow_mut().add_instruction(Instruction::Jnz(
                     left_tmp,
                     right_label.clone().into(),

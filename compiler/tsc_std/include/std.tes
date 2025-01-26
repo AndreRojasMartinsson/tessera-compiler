@@ -1,0 +1,5 @@
+extern func void exit(i64: exit_code);
+
+pub func void std.exit(u64: exit_code) {
+  exit(exit_code);
+}

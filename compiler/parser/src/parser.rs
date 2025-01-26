@@ -63,8 +63,9 @@ impl<'ctx> Parser<'ctx> {
                 Kind::EnumKw => todo!(),
                 Kind::StructKw => todo!(),
                 Kind::UnionKw => todo!(),
-                Kind::ImportKw => todo!(),
-                Kind::ModuleKw => todo!(),
+                Kind::ImportKw => self.parse_import(),
+                Kind::ExternKw => self.parse_extern(),
+                Kind::ModuleKw => self.parse_module(),
                 Kind::DefKw => todo!(),
                 _ => unreachable!(),
             };
@@ -76,6 +77,77 @@ impl<'ctx> Parser<'ctx> {
             sid: self.pop_scope(),
             node: node.finish(self),
             items,
+        }
+    }
+
+    fn parse_module(&mut self) -> ProgramItem {
+        let mut node = self.start_node();
+        self.bump(Kind::ModuleKw);
+
+        let tree = self.parse_member_expr(MemberTy::Namespace);
+
+        self.bump(Kind::Semicolon);
+
+        ProgramItem::Module {
+            node: node.finish(self),
+            tree,
+        }
+    }
+
+    fn parse_import(&mut self) -> ProgramItem {
+        let mut node = self.start_node();
+        self.bump(Kind::ImportKw);
+
+        let tree = self.parse_member_expr(MemberTy::Namespace);
+
+        self.bump(Kind::Semicolon);
+
+        ProgramItem::Import {
+            node: node.finish(self),
+            tree,
+        }
+    }
+
+    fn parse_extern(&mut self) -> ProgramItem {
+        let mut node = self.start_node();
+        self.bump(Kind::ExternKw);
+        self.bump(Kind::FuncKw);
+
+        let ty = self.parse_type();
+
+        let ident = self.parse_identifier();
+
+        self.bump(Kind::LParen);
+
+        if self.eat(Kind::RParen) {
+            self.bump(Kind::Semicolon);
+
+            return ProgramItem::ExternalFunction {
+                node: node.finish(self),
+                ty,
+                ident,
+                parameters: vec![],
+            };
+        }
+
+        self.push_scope();
+
+        let mut parameters = vec![self.parse_parameter()];
+        while let Some(Kind::Comma) = self.cur_kind() {
+            self.bump(Kind::Comma);
+            parameters.push(self.parse_parameter());
+        }
+
+        self.bump(Kind::RParen);
+        self.pop_scope();
+
+        self.bump(Kind::Semicolon);
+
+        ProgramItem::ExternalFunction {
+            node: node.finish(self),
+            ty,
+            ident,
+            parameters,
         }
     }
 
@@ -220,6 +292,7 @@ impl<'ctx> Parser<'ctx> {
                 | Kind::ReturnKw
                 | Kind::IntLiteral
                 | Kind::FloatLiteral
+                | Kind::Nil
                 | Kind::StringLiteral
                 | Kind::BoolLiteral
                 | Kind::ForKw
@@ -446,6 +519,7 @@ impl<'ctx> Parser<'ctx> {
             Some(Kind::WhileKw) => self.parse_while_expr(),
             Some(Kind::IntLiteral)
             | Some(Kind::FloatLiteral)
+            | Some(Kind::Nil)
             | Some(Kind::StringLiteral)
             | Some(Kind::BoolLiteral) => self.parse_literal(),
             c => unreachable!("{c:#?}"),
@@ -752,9 +826,9 @@ impl<'ctx> Parser<'ctx> {
 
         let token = self.cur_token().unwrap();
         let ty: Ty = match token.kind {
+            Kind::PrimitiveType => self.parse_primitive_type(),
             Kind::Identifier => self.parse_identifier_type(),
             Kind::LBracket => self.parse_array_type(),
-            Kind::PrimitiveType => self.parse_primitive_type(),
             c => unreachable!("{c:?}"),
         };
 

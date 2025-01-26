@@ -1,0 +1,163 @@
+extern func double log(double: x);
+extern func double logf(double: x);
+extern func double atan(double: x);
+extern func double atanf(double: x);
+
+
+###
+  Floating point Absolute Function
+
+  Gets the absolute value of a double.
+
+  @std
+  @version `1.0`
+  @example `let res: double = std::math::f_abs(-50.3)`
+###
+  pub func double std.math.f_abs(double: x) {
+  if x < 0 {
+    -x
+  } else {
+    x
+  };
+}
+
+pub func double std.math.f_sqrt(double: x) {
+  if x < 0 {
+    std.exit(1);
+  };
+
+  if x == 0 {
+    x
+  };
+
+  if x == 1 {
+    x
+  };
+
+  let guess: double = x / 2.0; # Initial Guess
+  let epsilon: double = 1e-15; # Precision
+  let diff: double = guess * guess - x;
+
+  while std.math.f_abs(diff) > epsilon {
+    guess = (guess + x / guess) / 2.0;
+    diff = guess * guess - x;
+  };
+
+  guess
+}
+
+###
+  Floating point Inverse Sine Function
+
+  Computes the inverse sine of a double
+
+  @std
+  @version `1.0`
+  @example `let res: double = std::math::f_arcsin(0.84)`
+###
+pub func double std.math.f_arcsin(double: x) {
+  let term: double = x;
+  let sum: double = x;
+  let n: double = 1.0;
+
+  for let i: u32 = 1, i < 10, i++ {
+    term *= (x * x * (2 * n - 1) * (2 * n - 1)) / (2 * n * (2 * n + 1));
+    sum += term;
+    n++;
+  };
+
+  sum
+}
+
+pub func double std.math.f_acosh(double: x) {
+  if x < 1.0 {
+    std.exit(1);
+  };
+
+  # std.math.f_log(x + )
+}
+
+###
+  Floating point Inverse Cosine Function
+
+  Computes the inverse cosine of a double
+
+  @std
+  @version `1.0`
+  @example `let res: double = std::math::f_acos(0.6)`
+###
+pub func double std.math.f_acos(double: x) {
+  if x < -1.0 {
+    std.exit(1);
+  };
+
+  if x > 1 {
+    std.exit(1);
+  };
+
+  let PI: double = 3.1415926535;
+
+  PI / 2.0 - std.math.f_arcsin(x);
+}
+
+pub func double std.math.f_log(double: x) {
+  if x <= 0 {
+    std.exit(1);
+  };
+
+  logf(x)
+}
+
+pub func double std.math.f_atan(double: x) {
+  atanf(x)
+}
+
+pub func double std.math.f_asinh(double: x) {
+  std.math.f_log(x + std.math.f_sqrt(x * x + 1))
+}
+
+pub func double std.math.f_asin(double: x) {
+  if x < -1.0 {
+    std.exit(1);
+  };
+
+  if x > 1 {
+    std.exit(1);
+  };
+
+  std.math.f_atan(x / std.math.f_sqrt(1 - x * x))
+}
+
+pub func i64 std.math.round(double: x) {
+  let integer_part: i64 = (i64)x;
+  let fractional_part: double = x - integer_part;
+  
+  if fractional_part >= 0.5 {
+    integer_part + 1
+  } else if fractional_part <= -0.5 {
+    integer_part - 1
+  };
+
+  integer_part
+}
+
+
+pub func i64 std.math.floor(double: x) {
+  let x_int: i64 = (i64)x;
+
+  if x < x_int {
+    x_int + 1
+  };
+
+  x_int
+}
+
+pub func i64 std.math.ceil(double: x) {
+  let x_int: i64 = (i64)x;
+
+  if x > x_int {
+    x_int + 1
+  };
+
+  x_int
+}

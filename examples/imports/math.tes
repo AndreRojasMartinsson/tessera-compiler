@@ -1,0 +1,5 @@
+module math;
+
+pub func double addf(double: a, double: b) {
+  a + b
+}

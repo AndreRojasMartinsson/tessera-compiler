@@ -18,5 +18,7 @@ diagnostics.workspace = true
 parser.workspace = true 
 lexer.workspace = true 
 type_solver.workspace = true
+import_resolver.workspace = true
 codegen.workspace = true
 symbols.workspace = true 
+tsc_std.workspace = true 
