@@ -422,6 +422,7 @@ impl<'ctx> Lexer<'ctx> {
             "out" => KindResult::Kind(Kind::OutKw),
             "func" => KindResult::Kind(Kind::FuncKw),
             "module" => KindResult::Kind(Kind::ModuleKw),
+            "extern" => KindResult::Kind(Kind::ExternKw),
             "import" => KindResult::Kind(Kind::ImportKw),
             "def" => KindResult::Kind(Kind::DefKw),
             "continue" => KindResult::Kind(Kind::ContinueKw),

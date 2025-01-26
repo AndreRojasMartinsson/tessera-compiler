@@ -84,6 +84,7 @@ pub enum Kind {
     UnionKw,
     StructKw,
     EnumKw,
+    ExternKw,
 
     // Literals
     IntLiteral,
