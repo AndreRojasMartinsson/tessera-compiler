@@ -408,9 +408,10 @@ impl<'ctx> Lexer<'ctx> {
         }
 
         match ident {
-            "double" | "single" | "u64" | "i64" | "u32" | "i32" | "str" | "void" => {
+            "double" | "single" | "u64" | "i64" | "u32" | "i32" | "str" | "void" | "bool" => {
                 KindResult::Kind(Kind::PrimitiveType)
             }
+            "true" | "false" => KindResult::Kind(Kind::BoolLiteral),
             "let" => KindResult::Kind(Kind::LetKw),
             "if" => KindResult::Kind(Kind::IfKw),
             "for" => KindResult::Kind(Kind::ForKw),

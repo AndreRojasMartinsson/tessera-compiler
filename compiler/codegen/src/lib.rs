@@ -102,6 +102,29 @@ impl CodeGen {
             ExtFunc::new(&[(Type::Double, "x")], "logf", Some(Type::Double)),
             ExtFunc::new(&[(Type::Double, "x")], "atan", Some(Type::Double)),
             ExtFunc::new(&[(Type::Double, "x")], "atanf", Some(Type::Double)),
+            // string comparison
+            ExtFunc::new(
+                &[(Type::Pointer(Box::new(Type::Char)), "s")],
+                "strlen",
+                Some(Type::Long),
+            ),
+            ExtFunc::new(
+                &[
+                    (Type::Pointer(Box::new(Type::Void)), "a1"),
+                    (Type::Pointer(Box::new(Type::Void)), "a2"),
+                    (Type::Long, "n"),
+                ],
+                "memcmp",
+                Some(Type::Long),
+            ),
+            ExtFunc::new(
+                &[
+                    (Type::Pointer(Box::new(Type::Char)), "s1"),
+                    (Type::Pointer(Box::new(Type::Char)), "s2"),
+                ],
+                "strcmp",
+                Some(Type::Long),
+            ),
         ];
 
         for func_signature in funcs {
@@ -1273,7 +1296,7 @@ impl CodeGen {
                     panic!("AHo")
                 }
                 let (operand_ty, operand_val) = self
-                    .generate_expr(func, module, *operand, ty, None, is_return)
+                    .generate_expr(func, module, *operand, ty, None, false)
                     .expect("Unexpected error when trying to parse operand of an unary operation");
 
                 let temp = self.new_temporary(Some("unary"), true);
@@ -1512,16 +1535,16 @@ impl CodeGen {
             } => {
                 let ctx = Context { module, func };
 
-                // if matches!(operator, BinaryOp::And | BinaryOp::Or) {
-                //     return Some(self.handle_short_circuiting_operation(
-                //         *left,
-                //         *right,
-                //         &ctx,
-                //         ty.clone(),
-                //         is_return,
-                //         operator,
-                //     ));
-                // }
+                if matches!(operator, BinaryOp::LogAnd | BinaryOp::LogOr) {
+                    return Some(self.handle_short_circuiting_operation(
+                        *left,
+                        *right,
+                        &ctx,
+                        ty.clone(),
+                        is_return,
+                        operator,
+                    ));
+                }
 
                 let (mut left_ty, left_val_unparsed) = self.generate_expr(func, module, *left.clone(), ty, None, false).expect("Unexpected error when trying to parse left side of an arithmetic operation");
                 let (mut right_ty, right_val_unparsed) = self.generate_expr(func, module, *right.clone(), ty, None, false).expect("Unexpected error when trying to parse right side of an arithmetic operation");
@@ -1635,6 +1658,8 @@ impl CodeGen {
                     BinaryOp::Gte,
                     BinaryOp::Equal,
                     BinaryOp::NotEqual,
+                    BinaryOp::LogAnd,
+                    BinaryOp::LogOr,
                 ]
                 .contains(&operator)
                 {
@@ -1855,14 +1880,14 @@ impl CodeGen {
         );
 
         match operator {
-            BinaryOp::And => {
+            BinaryOp::LogAnd => {
                 func.borrow_mut().add_instruction(Instruction::Jnz(
                     left_tmp,
                     end_label.clone().into(),
                     right_label.clone().into(),
                 ));
             }
-            BinaryOp::Or => {
+            BinaryOp::LogOr => {
                 func.borrow_mut().add_instruction(Instruction::Jnz(
                     left_tmp,
                     right_label.clone().into(),

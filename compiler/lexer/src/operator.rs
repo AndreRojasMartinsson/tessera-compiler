@@ -117,8 +117,8 @@ impl Display for BinaryOp {
             Self::Lte => write!(f, "<="),
             Self::Shl => write!(f, "<<"),
             Self::Shr => write!(f, ">>"),
-            Self::LogAnd => write!(f, "&&"),
-            Self::LogOr => write!(f, "||"),
+            Self::LogAnd => write!(f, "and"),
+            Self::LogOr => write!(f, "or"),
         }
     }
 }

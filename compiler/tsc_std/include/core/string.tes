@@ -1,6 +1,33 @@
-pub func i32 std.core.string.ends_with(str: string) {
-  out "Hi = %s\n" string;
-  out "Hi Pointer = %p\n" string;
+pub func i64 std.string.len(str: s) {
+  strlen(s)
+}
+
+pub func bool std.string.ends_with(str: haystack, str: needle) {
+  let haystack_len: i64 = std::string::len(haystack);
+  let needle_len: i64 = std::string::len(needle);
+
+  if (needle_len == 0 && haystack_len > 0) || (needle_len > haystack_len) {
+    false
+  };
+
+  let res: i64 = memcmp(haystack + haystack_len - needle_len, needle, needle_len)
+  if res == 0 {
+    true
+  };
+
+  false
+}
+
+pub func i64 std.string.contains(str: haystack, str: needle) {
+
+}
+
+pub func i64 std.string.equals(str: string_a, str: string_b) {
+  let res: i64 = strcmp(string_a, string_b);
+
+  if res == 0 {
+    true
+  };
   
-  50
+  false
 }

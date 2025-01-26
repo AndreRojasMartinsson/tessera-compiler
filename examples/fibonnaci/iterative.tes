@@ -1,7 +1,7 @@
 pub func void main() {
-  let val2: double = std::math::round(3.49);
+  let val2: bool = std::string::ends_with("Hello, world!", "d!");
 
-  out "val = %.20f\n" val2;
+  out "val = %d\n" val2;
 }
 
 
