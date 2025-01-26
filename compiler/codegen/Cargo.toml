@@ -14,6 +14,7 @@ ir_builder.workspace = true
 type_solver.workspace = true
 interner.workspace = true
 node.workspace = true
+import_resolver.workspace = true
 symbols.workspace = true 
 gxhash = "3.4.1"
 zstd = "0.13.2"

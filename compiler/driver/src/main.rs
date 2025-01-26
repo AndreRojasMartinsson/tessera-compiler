@@ -1,9 +1,11 @@
+use std::cell::RefCell;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
 use std::process;
 use std::process::exit;
 use std::process::Stdio;
+use std::rc::Rc;
 use std::str;
 
 use args::Command;
@@ -80,14 +82,17 @@ fn compile_file(
     println!("{:#?}", &ast);
 
     let mut resolver = ImportResolver::default();
-    resolver.resolve_program(&ast);
+    let _ = resolver.index_project(file_name.to_path_buf());
+
+    let resolver_ref = RefCell::new(resolver);
+    // resolver.resolve_program(&ast);
 
     // let mut solver = TypeSolver::default();
     // solver.solve(&ast);
 
     fs::create_dir_all(output_dir).expect("Could not create output directory");
 
-    if let Ok(ir) = CodeGen::compile(ast, true, print_ir) {
+    if let Ok(ir) = CodeGen::compile(ast, true, print_ir, &resolver_ref) {
         let asm_path = output_dir.join(format!("{}.s", basename.to_str().unwrap()));
 
         let ir_path = output_dir.join(format!("{}.ssa", basename.to_str().unwrap()));

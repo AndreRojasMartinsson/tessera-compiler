@@ -223,6 +223,7 @@ dependencies = [
  "context",
  "diagnostics",
  "gxhash",
+ "import_resolver",
  "interner",
  "ir_builder",
  "leb128",
@@ -442,6 +443,8 @@ dependencies = [
  "ast",
  "gxhash",
  "interner",
+ "lexer",
+ "parser",
  "symbols",
 ]
 

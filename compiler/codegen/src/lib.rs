@@ -1,5 +1,6 @@
 use gxhash::{HashMap, HashMapExt};
-use interner::{lookup, Atom};
+use import_resolver::ImportResolver;
+use interner::{intern, lookup, Atom};
 use lexer::operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp};
 use node::Node;
 use std::{
@@ -10,6 +11,7 @@ use std::{
     path::PathBuf,
     sync::Arc,
 };
+use symbols::ImportSymbol;
 
 use ast::{
     AssignTarget, Block as AstBlock, Expr, ForInit, IfAlternate, LetBinding, LiteralValue,
@@ -141,7 +143,12 @@ impl CodeGen {
         }
     }
 
-    pub fn compile(tree: Program, object_output: bool, print_ir: bool) -> Result<String, String> {
+    pub fn compile(
+        tree: Program,
+        object_output: bool,
+        print_ir: bool,
+        import_resolver: &RefCell<ImportResolver>,
+    ) -> Result<String, String> {
         let mut generator = Self {
             temp_count: 0,
             scopes: vec![],
@@ -172,6 +179,32 @@ impl CodeGen {
 
         generator.tree.items.clone().iter().for_each(|item| {
             match item {
+                ProgramItem::Import { tree, .. } => {
+                    // Resolve import
+                    let resolved_namespace =
+                        generator.convert_assign_target_to_name(AssignTarget::Member(tree.clone()));
+
+                    if let Some(import_path) = import_resolver
+                        .borrow()
+                        .index
+                        .get(&resolved_namespace.to_string())
+                    {
+                        if let Some(funcs) = import_resolver.borrow().functions.get(import_path) {
+                            for imported_func in funcs {
+                                let func = generator.generate_function(
+                                    intern!(&imported_func.name),
+                                    true,
+                                    &imported_func.parameters,
+                                    Some(Self::ast_type_to_type(imported_func.return_ty.clone())),
+                                    imported_func.body.clone(),
+                                    &module_ref,
+                                );
+
+                                module_ref.borrow_mut().add_function(func);
+                            }
+                        }
+                    }
+                }
                 ProgramItem::Function {
                     ty,
                     ident,

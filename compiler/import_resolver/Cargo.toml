@@ -8,4 +8,6 @@ edition.workspace = true
 interner.workspace = true
 symbols.workspace = true
 ast.workspace = true
+lexer.workspace = true
+parser.workspace = true
 gxhash = "3.4.1"
