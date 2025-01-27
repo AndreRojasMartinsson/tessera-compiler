@@ -1,13 +1,12 @@
 export function w $main(w %argc.203, l %argv.204) {
 @start
-  # Load variable from stack
   %a =l loadl %argv.204
   # Get index 1 (long so it's 8 bytes (64 bit) )
-  %b =l add %a, 8
+  %f =l mul 8, 3
+  %b =l add %argv.204, %f
+  %c =l loadl %b
 
-	call $printf(l $main.205, w %argc.203)
-	call $printf(l $main.206, l %argv.204)
-	call $printf(l $fmt, l %b)
+	call $printf(l $fmt, l %c)
 	ret 0
 }
 

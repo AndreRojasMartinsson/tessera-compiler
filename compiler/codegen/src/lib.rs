@@ -727,18 +727,8 @@ impl CodeGen {
                 let idx = self.generate_expr(func, module, *index, ty, None, false);
 
                 if let Some((var_ty, var_val)) = variable {
-                    let temp = self.new_temporary(None, false);
-
-                    func.borrow_mut().assign_instruction(
-                        &temp,
-                        &var_ty.clone(),
-                        Instruction::Load(var_ty.clone(), var_val.clone()),
-                    );
-
                     let index_temp = self.new_temporary(None, false);
                     let (index_ty, index_val) = idx.unwrap();
-
-                    println!("{var_ty:?} {:?}", var_ty.get_pointer_inner());
 
                     func.borrow_mut().assign_instruction(
                         &index_temp,
@@ -749,16 +739,26 @@ impl CodeGen {
                         ),
                     );
 
+                    let add_temp = self.new_temporary(None, false);
+
+                    func.borrow_mut().assign_instruction(
+                        &add_temp,
+                        &var_ty.clone(),
+                        Instruction::Add(var_val.clone(), index_temp),
+                    );
+
+                    let temp = self.new_temporary(None, false);
+
                     func.borrow_mut().assign_instruction(
                         &temp,
                         &var_ty.clone(),
-                        Instruction::Add(temp.clone(), index_temp),
+                        Instruction::Load(var_ty.clone(), add_temp.clone()),
                     );
 
                     return Some((var_ty, temp));
                 }
 
-                Some((Type::Word, Value::Global("Hi".into())))
+                None
             }
             Expr::PostfixUnary {
                 operand, operator, ..
