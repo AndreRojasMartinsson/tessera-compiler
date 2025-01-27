@@ -85,13 +85,13 @@ pub func void main() {
 - Type Resolver: ✓ (100%)
 - Import Resolver: ✓ (100%)
 - AST to IR Lowering: ⏲  WIP, todo:
-   - Index Expressions
    - Heap
    - Arrays (incl. Array Exprs, Array Init)
    - Structs (incl. Struct Exprs)
    - Pointers
  
   done:
+   - Index Expressions
    - Imports (incl. resolver)
    - Modules (incl. resolver)
    - Member Expressions
