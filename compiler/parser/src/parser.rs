@@ -859,8 +859,11 @@ impl<'ctx> Parser<'ctx> {
         self.bump(Kind::LBracket);
 
         let ty = self.parse_type();
-        self.bump(Kind::Semicolon);
-        let num = self.parse_expr(None);
+        let mut num: Option<Expr> = None;
+
+        if self.eat(Kind::Semicolon) {
+            num = Some(self.parse_expr(None));
+        }
 
         self.bump(Kind::RBracket);
 

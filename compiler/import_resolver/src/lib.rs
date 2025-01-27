@@ -128,8 +128,6 @@ impl ImportResolver {
             })
             .collect();
 
-        println!("{:#?}", self.functions);
-
         files
     }
 

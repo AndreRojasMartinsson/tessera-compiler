@@ -54,7 +54,7 @@ pub enum Ty {
     Double,
     Single,
     Void,
-    Array(Box<Type>, Box<Expr>),
+    Array(Box<Type>, Box<Option<Expr>>),
     Identifier(Atom),
 }
 
@@ -62,7 +62,7 @@ impl Display for Ty {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Identifier(atom) => write!(f, "{atom}"),
-            Self::Array(ty, expr) => write!(f, "{}{expr}", ty.ty),
+            Self::Array(ty, _) => write!(f, "{}", ty.ty,),
             Self::U32 => write!(f, "u32"),
             Self::U64 => write!(f, "u64"),
             Self::I32 => write!(f, "i32"),

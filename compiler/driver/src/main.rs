@@ -5,7 +5,6 @@ use std::path::Path;
 use std::process;
 use std::process::exit;
 use std::process::Stdio;
-use std::rc::Rc;
 use std::str;
 
 use args::Command;
@@ -18,9 +17,7 @@ use memmap2::Mmap;
 use miette::miette;
 use miette::IntoDiagnostic;
 use parser::parser::Parser;
-use symbols::ImportSymbol;
 use tsc_std::get_standard_library;
-use type_solver::TypeSolver;
 
 mod args;
 
@@ -48,11 +45,8 @@ fn compile_file(
     let bytes = &mmap[..];
     let original_source = str::from_utf8(bytes).into_diagnostic()?;
 
-    let (mut source, functions) = get_standard_library();
+    let (mut source, _functions) = get_standard_library();
     source.push_str(&format!("\n\n\n{original_source}"));
-    println!("{source}");
-
-    println!("{functions:#?}");
 
     let name = file_name.file_name().expect("Should have a filename");
     let _context = Context::new(name, file_name);
@@ -67,32 +61,19 @@ fn compile_file(
         match token {
             Ok(token) if token.kind == Kind::Eof => break,
             Ok(token) => tokens.push(token),
-            Err(err) => Err(err)?, // Err(e) => match e {
-                                   //     LexerError::InvalidInt(err) => Err(err),
-                                   //     LexerError::InvalidFloat(err) => panic!("{}", err),
-                                   //     LexerError::UnterminatedString(err) => panic!("{}", err),
-                                   //     LexerError::UnexpectedChar(err) => panic!("{}", err),
-                                   //     LexerError::UnexpectedEnd(err) => panic!("{}", err),
-                                   // }?,
+            Err(err) => Err(err)?,
         }
     }
 
     let mut parser = Parser::new(&mut tokens, &source);
     let ast = parser.parse();
-    println!("{:#?}", &ast);
 
     let mut resolver = ImportResolver::default();
     let _ = resolver.index_project(file_name.to_path_buf());
 
-    let resolver_ref = RefCell::new(resolver);
-    // resolver.resolve_program(&ast);
-
-    // let mut solver = TypeSolver::default();
-    // solver.solve(&ast);
-
     fs::create_dir_all(output_dir).expect("Could not create output directory");
 
-    if let Ok(ir) = CodeGen::compile(ast, true, print_ir, &resolver_ref) {
+    if let Ok(ir) = CodeGen::compile(ast, true, print_ir, &RefCell::new(resolver)) {
         let asm_path = output_dir.join(format!("{}.s", basename.to_str().unwrap()));
 
         let ir_path = output_dir.join(format!("{}.ssa", basename.to_str().unwrap()));

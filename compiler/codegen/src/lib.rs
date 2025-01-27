@@ -3,7 +3,7 @@ use import_resolver::ImportResolver;
 use interner::{intern, lookup, Atom};
 use lexer::operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp};
 use node::Node;
-use std::{cell::RefCell, cmp::Ordering};
+use std::{cell::RefCell, cmp::Ordering, ops::Index};
 
 use ast::{
     AssignTarget, Block as AstBlock, Expr, ForInit, IfAlternate, LetBinding, LiteralValue,
@@ -341,6 +341,8 @@ impl CodeGen {
             Ty::Bool => Type::Boolean,
             Ty::Str => Type::Pointer(Box::new(Type::Char)),
             Ty::Void => Type::Void,
+            Ty::Array(ty, _) => Type::Pointer(Box::new(Self::ast_type_to_type(*ty))),
+            // Ty::Array(ty, size) => Type
             c => unreachable!("{c:?}"),
         }
     }
@@ -533,7 +535,6 @@ impl CodeGen {
                         first_ty = Some(ty.clone());
 
                         if let Some(real_return_type) = func_ref.borrow().return_type.clone() {
-                            println!("{:?} {:?} {:?}", real_return_type, ty, val);
                             handle_inconsistent_types!(real_return_type, ty)
                         }
                     } else {
@@ -720,6 +721,45 @@ impl CodeGen {
         is_return: bool,
     ) -> Option<(Type, Value)> {
         let res = match stmt {
+            Expr::IndexExpr { member, index, .. } => {
+                let name = self.convert_assign_target_to_name(member.clone());
+                let variable = self.get_variable_lazy(&name, Some(func), Some(module));
+                let idx = self.generate_expr(func, module, *index, ty, None, false);
+
+                if let Some((var_ty, var_val)) = variable {
+                    let temp = self.new_temporary(None, false);
+
+                    func.borrow_mut().assign_instruction(
+                        &temp,
+                        &var_ty.clone(),
+                        Instruction::Load(var_ty.clone(), var_val.clone()),
+                    );
+
+                    let index_temp = self.new_temporary(None, false);
+                    let (index_ty, index_val) = idx.unwrap();
+
+                    println!("{var_ty:?} {:?}", var_ty.get_pointer_inner());
+
+                    func.borrow_mut().assign_instruction(
+                        &index_temp,
+                        &index_ty.clone(),
+                        Instruction::Mul(
+                            Value::Const(Prefix::None, format!("{}", var_ty.size(module)).into()),
+                            index_val,
+                        ),
+                    );
+
+                    func.borrow_mut().assign_instruction(
+                        &temp,
+                        &var_ty.clone(),
+                        Instruction::Add(temp.clone(), index_temp),
+                    );
+
+                    return Some((var_ty, temp));
+                }
+
+                Some((Type::Word, Value::Global("Hi".into())))
+            }
             Expr::PostfixUnary {
                 operand, operator, ..
             } => {
@@ -1141,7 +1181,6 @@ impl CodeGen {
                             };
                         }
                         ast::BlockItem::Continue { .. } => {
-                            println!("HI");
                             if let Some(label) = &self.loop_labels.last() {
                                 func.borrow_mut().add_instruction(Instruction::Jmp(
                                     format!("{}.step", label).into(),
@@ -1801,7 +1840,6 @@ impl CodeGen {
                         Instruction::Copy(val)
                     }
                 } else {
-                    println!("{:?} {:?}", first, val);
                     Instruction::Ext(first, val)
                 },
             );

@@ -1,6 +1,6 @@
 pub func i32 main(i32: argc, [str]: argv) {
   out "argc = %d\n" argc;
-  out "argv = %s\n" argv[0];
+  out "argv = %s\n" argv[1];
 
 }
 
