@@ -9,6 +9,7 @@ parser.workspace = true
 lexer.workspace = true 
 ast.workspace = true 
 interner.workspace = true 
+ir_builder.workspace = true
 
 [build-dependencies]
 codegen.workspace = true

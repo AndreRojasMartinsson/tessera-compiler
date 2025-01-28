@@ -8,3 +8,4 @@ edition.workspace = true
 node.workspace = true
 interner.workspace = true
 lexer.workspace = true
+ir_builder.workspace = true

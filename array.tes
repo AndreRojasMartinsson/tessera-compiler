@@ -1,0 +1,12 @@
+pub func void main() {
+  let myAge: i32 = 43;
+  let ptr: *i32 = &myAge;
+  let dodo: i32 = *ptr;
+  out "%d\n" myAge;
+  out "%p\n" ptr;
+  out "%p\n" &myAge;
+  # out "%d\n" *ptr;
+  # out "%p\n" &myAge;
+  #
+  # out "%d\n" *ptr;
+}

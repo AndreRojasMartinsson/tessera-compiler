@@ -4,9 +4,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use ast::{Block, Parameter, Program, ProgramItem, Ty, Type};
+use ast::{Block, Parameter, Program, ProgramItem};
 use gxhash::HashMap;
 use interner::lookup;
+use ir_builder::Type;
 use lexer::{Kind, Lexer};
 use parser::parser::Parser;
 
@@ -101,7 +102,7 @@ impl ImportResolver {
                                     ..
                                 } => ImportedFunction {
                                     name: format!("{namespace}.{}", lookup!(ident.name)),
-                                    return_ty: ty.clone(),
+                                    return_ty: ty.ty.clone(),
                                     body: body.clone(),
                                     parameters: parameters.to_vec(),
                                 },

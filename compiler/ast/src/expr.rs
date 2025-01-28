@@ -7,7 +7,7 @@ use lexer::{
 };
 use node::Node;
 
-use crate::{Block, LetBinding, Type};
+use crate::{Block, LetBinding, TypeNode};
 
 #[derive(Debug, Clone)]
 pub enum LiteralValue {
@@ -93,13 +93,13 @@ pub enum Expr {
     /// (double)70 or (int)5.5
     Cast {
         node: Node,
-        ty: Type,
+        ty: TypeNode,
         expr: Box<Expr>,
     },
     /// new [double; 20] or [str; 10]
     ArrayInit {
         node: Node,
-        ty: Type,
+        ty: TypeNode,
         size: Box<Expr>,
     },
     /// [1.0, 5.0, 35.38]
@@ -134,7 +134,7 @@ impl Display for Expr {
         match self {
             Self::Identifier(atom) => write!(f, "{}", atom.name),
             Self::Paren { expr, .. } => write!(f, "{expr}"),
-            Self::Cast { ty, expr, .. } => write!(f, "{expr}"),
+            Self::Cast { expr, .. } => write!(f, "{expr}"),
             Self::Literal { value, .. } => write!(f, "{value}"),
             _ => Ok(()),
         }

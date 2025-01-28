@@ -1,7 +1,6 @@
-use std::fmt::Display;
-
 pub use expr::*;
 use interner::Atom;
+use ir_builder::Type;
 use node::Node;
 
 #[derive(Debug, Clone)]
@@ -23,13 +22,13 @@ pub enum ProgramItem {
     },
     ExternalFunction {
         node: Node,
-        ty: Type,
+        ty: TypeNode,
         ident: Identifier,
         parameters: Vec<Parameter>,
     },
     Function {
         node: Node,
-        ty: Type,
+        ty: TypeNode,
         ident: Identifier,
         parameters: Vec<Parameter>,
         public: bool,
@@ -38,48 +37,48 @@ pub enum ProgramItem {
 }
 
 #[derive(Debug, Clone)]
-pub struct Type {
+pub struct TypeNode {
     pub node: Node,
-    pub ty: Ty,
+    pub ty: Type,
 }
 
-#[derive(Debug, Clone)]
-pub enum Ty {
-    U32,
-    U64,
-    I32,
-    I64,
-    Str,
-    Bool,
-    Double,
-    Single,
-    Void,
-    Array(Box<Type>, Box<Option<Expr>>),
-    Identifier(Atom),
-}
+// #[derive(Debug, Clone)]
+// pub enum Ty {
+//     U32,
+//     U64,
+//     I32,
+//     I64,
+//     Str,
+//     Bool,
+//     Double,
+//     Single,
+//     Void,
+//     Array(Box<Type>, Box<Option<Expr>>),
+//     Identifier(Atom),
+// }
 
-impl Display for Ty {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Identifier(atom) => write!(f, "{atom}"),
-            Self::Array(ty, _) => write!(f, "{}", ty.ty,),
-            Self::U32 => write!(f, "u32"),
-            Self::U64 => write!(f, "u64"),
-            Self::I32 => write!(f, "i32"),
-            Self::I64 => write!(f, "i64"),
-            Self::Str => write!(f, "str"),
-            Self::Bool => write!(f, "bool"),
-            Self::Void => write!(f, "void"),
-            Self::Double => write!(f, "double"),
-            Self::Single => write!(f, "single"),
-        }
-    }
-}
+// impl Display for Ty {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         match self {
+//             Self::Identifier(atom) => write!(f, "{atom}"),
+//             Self::Array(ty, _) => write!(f, "{}", ty.ty,),
+//             Self::U32 => write!(f, "u32"),
+//             Self::U64 => write!(f, "u64"),
+//             Self::I32 => write!(f, "i32"),
+//             Self::I64 => write!(f, "i64"),
+//             Self::Str => write!(f, "str"),
+//             Self::Bool => write!(f, "bool"),
+//             Self::Void => write!(f, "void"),
+//             Self::Double => write!(f, "double"),
+//             Self::Single => write!(f, "single"),
+//         }
+//     }
+// }
 
 #[derive(Debug, Clone)]
 pub struct Parameter {
     pub node: Node,
-    pub ty: Type,
+    pub ty: TypeNode,
     pub ident: Identifier,
 }
 
@@ -93,7 +92,7 @@ pub struct Block {
 pub struct LetBinding {
     pub node: Node,
     pub ident: Identifier,
-    pub ty: Type,
+    pub ty: TypeNode,
     pub init: Option<Expr>,
 }
 

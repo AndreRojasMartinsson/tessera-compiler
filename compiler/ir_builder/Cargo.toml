@@ -6,3 +6,4 @@ edition.workspace = true
 
 [dependencies]
 gxhash = "3.4.1"
+

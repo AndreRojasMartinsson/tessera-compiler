@@ -1,10 +1,11 @@
 use ast::{
-    Block, Expr, ForInit, Identifier, IfAlternate, LetBinding, Parameter, Program, ProgramItem, Ty,
-    Type,
+    Block, Expr, ForInit, Identifier, IfAlternate, LetBinding, Parameter, Program, ProgramItem,
+    TypeNode,
 };
+
 use gxhash::HashMap;
-use interner::Atom;
-use ir_builder::Type as IRType;
+use interner::{intern, Atom};
+use ir_builder::Type;
 use symbols::SolvedType;
 
 #[derive(Default, Debug)]
@@ -12,34 +13,30 @@ pub struct TypeSolver {
     resolved_identifiers: HashMap<Atom, SolvedType>,
 }
 
-pub fn ty_to_ir_type(ty: Ty, resolved_identifiers: HashMap<Atom, SolvedType>) -> IRType {
+pub fn ty_to_ir_type(ty: Type, resolved_identifiers: HashMap<Atom, SolvedType>) -> Type {
     match ty {
-        Ty::U32 | Ty::I32 => IRType::Word,
-        Ty::U64 | Ty::I64 => IRType::Long,
-        Ty::Double => IRType::Double,
-        Ty::Single => IRType::Single,
-        Ty::Identifier(ident) => match resolved_identifiers.get(&ident).unwrap() {
+        Type::Unknown(ident) => match resolved_identifiers.get(&intern!(ident.as_ref())).unwrap() {
             SolvedType::Computed(ty) => ty.clone(),
             SolvedType::Function(ty, _) => ty.clone(),
         },
-        Ty::Array(_ty, _expr) => todo!(),
-        Ty::Bool => todo!(),
-        Ty::Str => IRType::Long,
-        _ => unreachable!(),
+        // Ty::Identifier(ident) => match resolved_identifiers.get(&ident).unwrap() {
+        //     SolvedType::Computed(ty) => ty.clone(),
+        //     SolvedType::Function(ty, _) => ty.clone(),
+        // },
+        _ => ty,
     }
 }
 
-fn solve_type(ty: Ty, resolved_identifiers: HashMap<Atom, SolvedType>) -> Option<SolvedType> {
+fn solve_type(ty: Type, resolved_identifiers: HashMap<Atom, SolvedType>) -> Option<SolvedType> {
     match ty {
-        Ty::U32 | Ty::I32 => Some(SolvedType::Computed(IRType::Word)),
-        Ty::U64 | Ty::I64 => Some(SolvedType::Computed(IRType::Long)),
-        Ty::Double => Some(SolvedType::Computed(IRType::Double)),
-        Ty::Single => Some(SolvedType::Computed(IRType::Single)),
-        Ty::Identifier(ident) => Some(resolved_identifiers.get(&ident).unwrap().clone()),
-        Ty::Array(_ty, _expr) => todo!(),
-        Ty::Bool => todo!(),
-        Ty::Void => None,
-        Ty::Str => Some(SolvedType::Computed(IRType::Long)),
+        Type::Unknown(ident) => Some(
+            resolved_identifiers
+                .get(&intern!(ident.as_ref()))
+                .unwrap()
+                .clone(),
+        ),
+        Type::Void => None,
+        _ty => Some(SolvedType::Computed(_ty)),
     }
 }
 
@@ -67,13 +64,13 @@ impl TypeSolver {
 
     fn solve_func(
         &mut self,
-        return_ty: Type,
+        return_ty: TypeNode,
         ident: Identifier,
         parameters: Vec<Parameter>,
         body: Block,
     ) {
         if let Some(return_ty) = solve_type(return_ty.ty, self.resolved_identifiers.clone()) {
-            let params: Vec<IRType> = parameters
+            let params: Vec<Type> = parameters
                 .iter()
                 .map(|param| {
                     let ident = param.ident.clone();

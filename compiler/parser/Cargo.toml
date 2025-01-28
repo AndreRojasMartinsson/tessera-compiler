@@ -11,4 +11,5 @@ lexer.workspace = true
 interner.workspace = true
 diagnostics.workspace = true
 context.workspace = true
+ir_builder.workspace = true
 ast.workspace = true

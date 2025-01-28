@@ -11,3 +11,4 @@ ast.workspace = true
 lexer.workspace = true
 parser.workspace = true
 gxhash = "3.4.1"
+ir_builder.workspace = true

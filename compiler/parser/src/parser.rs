@@ -2,9 +2,10 @@ use std::slice::Iter;
 
 use ast::{
     AssignTarget, Block, BlockItem, Expr, ForInit, Identifier, IfAlternate, IfExpr, LetBinding,
-    LiteralValue, MemberExpr, MemberTy, Parameter, Program, ProgramItem, Ty, Type,
+    LiteralValue, MemberExpr, MemberTy, Parameter, Program, ProgramItem, TypeNode,
 };
 use interner::{lookup, Atom};
+use ir_builder::Type;
 use lexer::{
     operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp},
     value::Value,
@@ -824,41 +825,57 @@ impl<'ctx> Parser<'ctx> {
         }
     }
 
-    fn parse_type(&mut self) -> Type {
+    fn parse_type(&mut self) -> TypeNode {
         let mut node = self.start_node();
 
         let token = self.cur_token().unwrap();
-        let ty: Ty = match token.kind {
+        let ty: Type = match token.kind {
             Kind::PrimitiveType => self.parse_primitive_type(),
             Kind::Identifier => self.parse_identifier_type(),
             Kind::LBracket => self.parse_array_type(),
+            Kind::Asterisk => self.parse_pointer_type(),
             c => unreachable!("{c:?}"),
         };
 
-        Type {
+        TypeNode {
             node: node.finish(self),
             ty,
         }
     }
 
-    fn parse_primitive_type(&mut self) -> Ty {
+    fn parse_pointer_type(&mut self) -> Type {
+        self.bump(Kind::Asterisk);
+        let r#type = self.parse_type();
+        let mut ty: Type = Type::Pointer(Box::new(r#type.ty));
+
+        while let Some(Kind::Asterisk) = self.cur_kind() {
+            self.bump(Kind::Asterisk);
+
+            let type_node = self.parse_type();
+            ty = Type::Pointer(Box::new(type_node.ty));
+        }
+
+        ty
+    }
+
+    fn parse_primitive_type(&mut self) -> Type {
         let token = self.advance();
 
         match lookup!(token.lexeme).as_str() {
-            "u32" => Ty::U32,
-            "i32" => Ty::I32,
-            "i64" => Ty::I64,
-            "u64" => Ty::U64,
-            "double" => Ty::Double,
-            "single" => Ty::Single,
-            "str" => Ty::Str,
-            "bool" => Ty::Bool,
-            "void" => Ty::Void,
+            "u32" => Type::UnsignedWord,
+            "i32" => Type::Word,
+            "i64" => Type::Long,
+            "u64" => Type::UnsignedLong,
+            "double" => Type::Double,
+            "single" => Type::Single,
+            "str" => Type::Pointer(Box::new(Type::Char)),
+            "bool" => Type::Boolean,
+            "void" => Type::Void,
             _ => unreachable!(),
         }
     }
 
-    fn parse_array_type(&mut self) -> Ty {
+    fn parse_array_type(&mut self) -> Type {
         self.bump(Kind::LBracket);
 
         let ty = self.parse_type();
@@ -870,13 +887,14 @@ impl<'ctx> Parser<'ctx> {
 
         self.bump(Kind::RBracket);
 
-        Ty::Array(Box::new(ty), Box::new(num))
+        Type::Pointer(Box::new(ty.ty))
+        // Type::Array(Box::new(ty), Box::new(num))
     }
 
-    fn parse_identifier_type(&mut self) -> Ty {
+    fn parse_identifier_type(&mut self) -> Type {
         let ident = self.parse_identifier();
 
-        Ty::Identifier(ident.name)
+        Type::Unknown(lookup!(ident.name).into())
     }
 
     fn parse_prefix(&mut self) -> Expr {

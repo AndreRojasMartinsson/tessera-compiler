@@ -87,6 +87,7 @@ name = "ast"
 version = "0.1.0"
 dependencies = [
  "interner",
+ "ir_builder",
  "lexer",
  "node",
 ]
@@ -443,6 +444,7 @@ dependencies = [
  "ast",
  "gxhash",
  "interner",
+ "ir_builder",
  "lexer",
  "parser",
  "symbols",
@@ -682,6 +684,7 @@ dependencies = [
  "context",
  "diagnostics",
  "interner",
+ "ir_builder",
  "lexer",
  "node",
  "symbols",
@@ -1120,6 +1123,7 @@ dependencies = [
  "ast",
  "codegen",
  "interner",
+ "ir_builder",
  "lexer",
  "parser",
 ]

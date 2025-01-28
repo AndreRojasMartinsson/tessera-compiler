@@ -1,4 +1,4 @@
-use ast::Type as AstType;
+use ast::TypeNode;
 use interner::{intern, Atom};
 use ir_builder::Type;
 use uuid::Uuid;
@@ -65,7 +65,7 @@ pub enum SolvedType {
 pub struct VariableSymbol {
     pub id: Atom,
     pub name: Atom,
-    pub ty: AstType,
+    pub ty: TypeNode,
     pub visibility: Visibility,
     pub mutability: Mutability,
     /// Reference count, can be used to determine of symbol is unused
@@ -76,7 +76,7 @@ pub struct VariableSymbol {
 pub struct FunctionSymbol {
     pub id: Atom,
     pub name: Atom,
-    pub return_ty: AstType,
+    pub return_ty: TypeNode,
     /// Vector of atom's SID's used to get variable symbol from global map.
     pub parameters: Vec<Atom>,
     pub visibility: Visibility,
@@ -87,7 +87,7 @@ pub struct FunctionSymbol {
 impl FunctionSymbol {
     pub fn new(
         name: Atom,
-        return_ty: AstType,
+        return_ty: TypeNode,
         parameters: Vec<Atom>,
         visibility: Visibility,
     ) -> (Self, Atom) {
@@ -108,7 +108,7 @@ impl FunctionSymbol {
 impl VariableSymbol {
     pub fn new(
         name: Atom,
-        ty: AstType,
+        ty: TypeNode,
         visibility: Visibility,
         mutability: Mutability,
     ) -> (Self, Atom) {

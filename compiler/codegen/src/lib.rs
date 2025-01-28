@@ -3,15 +3,16 @@ use import_resolver::ImportResolver;
 use interner::{intern, lookup, Atom};
 use lexer::operator::{AssignOp, BinaryOp, PostfixOp, PrefixOp};
 use node::Node;
-use std::{cell::RefCell, cmp::Ordering, ops::Index};
+use std::{cell::RefCell, cmp::Ordering};
 
 use ast::{
     AssignTarget, Block as AstBlock, Expr, ForInit, IfAlternate, LetBinding, LiteralValue,
-    Parameter, Program, ProgramItem, Ty, Type as AstType,
+    Parameter, Program, ProgramItem,
 };
+
 use ir_builder::{
-    Cmp, Data, DataItem, Function, ImutStr, Instruction, Linkage, Module, Prefix, Statement,
-    StructPool, Type, Value, GC_NOOP,
+    Cmp, Data, DataItem, Function, ImutStr, Instruction, Linkage, Module, Prefix, Primitive,
+    Statement, StructPool, Type, Value, GC_NOOP,
 };
 
 macro_rules! hashmap {
@@ -116,7 +117,7 @@ impl CodeGen {
                                     intern!(&imported_func.name),
                                     true,
                                     &imported_func.parameters,
-                                    Some(Self::ast_type_to_type(imported_func.return_ty.clone())),
+                                    Some(imported_func.return_ty.clone()),
                                     imported_func.body.clone(),
                                     &module_ref,
                                 );
@@ -138,7 +139,7 @@ impl CodeGen {
                         ident.name,
                         *public,
                         parameters,
-                        Some(Self::ast_type_to_type(ty.clone())),
+                        Some(ty.ty.clone()),
                         body.clone(),
                         &module_ref,
                     );
@@ -153,13 +154,13 @@ impl CodeGen {
                 } => {
                     let func = Function {
                         name: lookup!(ident.name).into(),
-                        return_type: Some(Self::ast_type_to_type(ty.clone())),
+                        return_type: Some(ty.ty.clone()),
                         parameters: parameters
                             .to_vec()
                             .iter()
                             .map(|param| {
                                 (
-                                    Self::ast_type_to_type(param.ty.clone()),
+                                    param.ty.ty.clone(),
                                     Value::Temp(lookup!(param.ident.name).into()),
                                 )
                             })
@@ -330,23 +331,6 @@ impl CodeGen {
         }
     }
 
-    fn ast_type_to_type(ast_ty: AstType) -> Type {
-        match ast_ty.ty {
-            Ty::U32 => Type::UnsignedWord,
-            Ty::U64 => Type::UnsignedLong,
-            Ty::I32 => Type::Word,
-            Ty::I64 => Type::Long,
-            Ty::Double => Type::Double,
-            Ty::Single => Type::Single,
-            Ty::Bool => Type::Boolean,
-            Ty::Str => Type::Pointer(Box::new(Type::Char)),
-            Ty::Void => Type::Void,
-            Ty::Array(ty, _) => Type::Pointer(Box::new(Self::ast_type_to_type(*ty))),
-            // Ty::Array(ty, size) => Type
-            c => unreachable!("{c:?}"),
-        }
-    }
-
     fn generate_function(
         &mut self,
         ident: Atom,
@@ -361,16 +345,16 @@ impl CodeGen {
         let mut params = vec![];
 
         for parameter in parameters {
-            let ty = Self::ast_type_to_type(parameter.ty.clone());
+            let ty = parameter.ty.clone();
 
             let tmp = self.new_variable(
-                &ty,
+                &ty.ty,
                 lookup!(parameter.ident.name.clone()).into(),
                 false,
                 false,
             );
 
-            params.push((ty.into_abi(), tmp));
+            params.push((ty.ty.into_abi(), tmp));
         }
 
         let mut func = Function {
@@ -638,7 +622,7 @@ impl CodeGen {
         item: LetBinding,
     ) -> Option<(Type, Value)> {
         let name: ImutStr = lookup!(item.ident.name).into();
-        let mut local_ty = Self::ast_type_to_type(item.ty);
+        let mut local_ty = item.ty.ty;
         let mut temp = Some(self.new_variable(&local_ty, name.clone(), false, false));
 
         let parsed = self.generate_expr(
@@ -695,12 +679,12 @@ impl CodeGen {
                 final_val.clone(),
             ));
 
-            if final_ty.is_pointer() {
-                func.borrow_mut().add_instruction(Instruction::Call(
-                    Value::Global(GC_NOOP.into()),
-                    vec![(final_ty.clone(), addr_val.clone())],
-                ));
-            }
+            // if final_ty.is_pointer() {
+            //     func.borrow_mut().add_instruction(Instruction::Call(
+            //         Value::Global(GC_NOOP.into()),
+            //         vec![(final_ty.clone(), addr_val.clone())],
+            //     ));
+            // }
 
             self.address_pool
                 .insert(temp.clone().unwrap().to_string(), addr_val.clone());
@@ -722,17 +706,11 @@ impl CodeGen {
     ) -> Option<(Type, Value)> {
         let res = match stmt {
             Expr::ArrayInit { ty, size, .. } => {
-                let array_size = self.generate_expr(
-                    func,
-                    module,
-                    *size,
-                    &Some(Self::ast_type_to_type(ty.clone())),
-                    None,
-                    false,
-                );
+                let array_size =
+                    self.generate_expr(func, module, *size, &Some(ty.ty.clone()), None, false);
 
                 if let Some((size_ty, size)) = array_size {
-                    let var_ty = Self::ast_type_to_type(ty.clone());
+                    let var_ty = ty.ty.clone();
                     let var_temp = self.new_temporary(None, false);
                     let size_temp = self.new_temporary(None, false);
 
@@ -752,7 +730,7 @@ impl CodeGen {
                     );
                 }
 
-                Some((Self::ast_type_to_type(ty.clone()), Value::Global("".into())))
+                Some((ty.ty.clone(), Value::Global("".into())))
             }
             Expr::IndexExpr { member, index, .. } => {
                 let name = self.convert_assign_target_to_name(member.clone());
@@ -1356,6 +1334,39 @@ impl CodeGen {
                 let temp = self.new_temporary(Some("unary"), true);
 
                 match operator {
+                    PrefixOp::Deref => {
+                        if operand_ty.is_pointer() {
+                            let inner_ty = operand_ty.get_pointer_inner().unwrap();
+
+                            func.borrow_mut().assign_instruction(
+                                &temp,
+                                &inner_ty,
+                                Instruction::Load(inner_ty.clone(), operand_val),
+                            );
+                        } else {
+                            panic!("Oh no");
+                        }
+                    }
+                    PrefixOp::Addr => {
+                        let new_ty = &Type::Pointer(Box::new(operand_ty.clone()));
+
+                        func.borrow_mut().assign_instruction(
+                            &temp,
+                            new_ty,
+                            Instruction::Alloc8(Value::Const(
+                                Prefix::None,
+                                operand_ty.size(module).to_string().into(),
+                            )),
+                        );
+
+                        func.borrow_mut().add_instruction(Instruction::Store(
+                            operand_ty.clone(),
+                            temp.clone(),
+                            operand_val,
+                        ));
+
+                        return Some((new_ty.clone(), temp));
+                    }
                     PrefixOp::Not => func.borrow_mut().assign_instruction(
                         &temp,
                         &operand_ty,
@@ -1456,7 +1467,7 @@ impl CodeGen {
                             Instruction::Copy(temp.clone()),
                         );
                     }
-                    _ => todo!(),
+                    c => todo!("{c:#?}"),
                 };
 
                 Some((operand_ty, temp))
@@ -1479,13 +1490,7 @@ impl CodeGen {
                 let value = self.generate_expr(func, module, *expr, &None, None, false);
 
                 if let Some((val_ty, val_val)) = value {
-                    let dodo = self.convert_to_type(
-                        func,
-                        val_ty,
-                        Self::ast_type_to_type(ty),
-                        val_val,
-                        true,
-                    );
+                    let dodo = self.convert_to_type(func, val_ty, ty.ty, val_val, true);
 
                     return Some((dodo.0, dodo.1));
                 }

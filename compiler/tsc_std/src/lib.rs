@@ -1,5 +1,6 @@
-use ast::{ProgramItem, Ty};
+use ast::ProgramItem;
 use interner::lookup;
+use ir_builder::Type;
 use lexer::{Kind, Lexer};
 use parser::parser::Parser;
 
@@ -11,7 +12,7 @@ use parser::parser::Parser;
 ///   - std
 ///   - std::mem::copy
 ///   - etc...
-pub fn get_standard_library() -> (String, Vec<(Ty, String, Vec<Ty>)>) {
+pub fn get_standard_library() -> (String, Vec<(Type, String, Vec<Type>)>) {
     let std_source = include_str!(concat!(env!("OUT_DIR"), "/_std.tes"));
 
     let mut lexer = Lexer::new(std_source);
