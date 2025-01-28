@@ -691,7 +691,10 @@ impl<'ctx> Parser<'ctx> {
 
         let ty = self.parse_type();
         self.bump(Kind::Semicolon);
+
         let expr = self.parse_expr(None);
+
+        self.bump(Kind::RBracket);
 
         Expr::ArrayInit {
             node: node.finish(self),

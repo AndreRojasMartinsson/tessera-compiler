@@ -721,6 +721,39 @@ impl CodeGen {
         is_return: bool,
     ) -> Option<(Type, Value)> {
         let res = match stmt {
+            Expr::ArrayInit { ty, size, .. } => {
+                let array_size = self.generate_expr(
+                    func,
+                    module,
+                    *size,
+                    &Some(Self::ast_type_to_type(ty.clone())),
+                    None,
+                    false,
+                );
+
+                if let Some((size_ty, size)) = array_size {
+                    let var_ty = Self::ast_type_to_type(ty.clone());
+                    let var_temp = self.new_temporary(None, false);
+                    let size_temp = self.new_temporary(None, false);
+
+                    func.borrow_mut().assign_instruction(
+                        &size_temp,
+                        &Type::Long,
+                        Instruction::Mul(
+                            Value::Const(Prefix::None, format!("{}", var_ty.size(module)).into()),
+                            size,
+                        ),
+                    );
+
+                    func.borrow_mut().assign_instruction(
+                        &var_temp,
+                        &Type::Long,
+                        Instruction::Alloc8(size_temp),
+                    );
+                }
+
+                Some((Self::ast_type_to_type(ty.clone()), Value::Global("".into())))
+            }
             Expr::IndexExpr { member, index, .. } => {
                 let name = self.convert_assign_target_to_name(member.clone());
                 let variable = self.get_variable_lazy(&name, Some(func), Some(module));
