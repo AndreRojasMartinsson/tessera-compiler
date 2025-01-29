@@ -1350,6 +1350,8 @@ impl CodeGen {
                     PrefixOp::Addr => {
                         let new_ty = &Type::Pointer(Box::new(operand_ty.clone()));
 
+                        println!("AHOHI {:?} {:?} {:?}", new_ty, operand_ty, ty);
+
                         func.borrow_mut().assign_instruction(
                             &temp,
                             new_ty,
@@ -1841,6 +1843,8 @@ impl CodeGen {
                 second.display()
             )
         }
+
+        println!("{first:#?} {second:#?} {explicit:?}");
 
         if ((first.is_strictly_number() && second.is_string())
             || (second.is_strictly_number() && first.is_string()))

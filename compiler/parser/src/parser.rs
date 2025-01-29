@@ -492,6 +492,7 @@ impl<'ctx> Parser<'ctx> {
             | Some(Kind::Bang)
             | Some(Kind::Dash) => self.parse_prefix(),
             Some(Kind::LParen) => match self.lookahead_n(1).map(|x| x.kind) {
+                Some(Kind::Asterisk) => self.parse_cast_expr(),
                 Some(Kind::PrimitiveType) => self.parse_cast_expr(),
                 _ => {
                     let mut node = self.start_node();

@@ -2,11 +2,17 @@ pub func void main() {
   let myAge: i32 = 43;
   let ptr: *i32 = &myAge;
   let dodo: i32 = *ptr;
-  out "%d\n" myAge;
-  out "%p\n" ptr;
-  out "%p\n" &myAge;
-  # out "%d\n" *ptr;
-  # out "%p\n" &myAge;
+
+  # let ptr2: *i32 = &myAge;
   #
-  # out "%d\n" *ptr;
+  # let lbud: i32 = *ptr2;
+
+  # out "%d\n" ()&myAge;
+  #
+  # out "%p\n" ptr;
+  # out "%p\n" ptr2;
+  # out "%d\n" lbud;
+
+
+  out "%d\n" *ptr;
 }
